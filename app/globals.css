@@ -1,0 +1,87 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Monochrome, angular theme: black & white only, no radius, no shadows.
+ * Dark mode follows the system and simply swaps the two tones.
+ */
+:root {
+  --background: #ffffff;
+  --foreground: #000000;
+  --muted: #f2f2f2;
+  --muted-foreground: #5c5c5c;
+  --border: #000000;
+  --input: #000000;
+  --ring: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #ffffff;
+  --secondary-foreground: #000000;
+  --destructive: #b00020;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #000000;
+    --foreground: #ffffff;
+    --muted: #141414;
+    --muted-foreground: #a3a3a3;
+    --border: #ffffff;
+    --input: #ffffff;
+    --ring: #ffffff;
+    --primary: #ffffff;
+    --primary-foreground: #000000;
+    --secondary: #000000;
+    --secondary-foreground: #ffffff;
+    --destructive: #ff6b81;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+
+  --radius: 0px;
+  --spacing-safe-top: env(safe-area-inset-top);
+  --spacing-safe-bottom: env(safe-area-inset-bottom);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+}
+
+@utility label-caps {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
