@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 
 const Drawer = BaseDrawer.Root;
 const DrawerTrigger = BaseDrawer.Trigger;
-const DrawerClose = BaseDrawer.Close;
 
 /** Bottom sheet, swipe down to close. */
 function DrawerContent({ title, className, children }: { title: string; className?: string; children: ReactNode }) {
@@ -33,4 +32,4 @@ function DrawerContent({ title, className, children }: { title: string; classNam
   );
 }
 
-export { Drawer, DrawerClose, DrawerContent, DrawerTrigger };
+export { Drawer, DrawerContent, DrawerTrigger };

@@ -10,7 +10,7 @@ import type { AuthError } from "@supabase/supabase-js";
 import { authErrorMessage, GENERIC_AUTH_ERROR } from "@/lib/auth/errors";
 import { createClient } from "@/lib/supabase/client";
 
-export const OTP_LENGTH = 6;
+const OTP_LENGTH = 6;
 
 type Step = "email" | "code";
 

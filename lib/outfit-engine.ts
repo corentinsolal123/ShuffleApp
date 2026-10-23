@@ -13,7 +13,7 @@ import {
   type WeatherRuleConfig,
 } from "@/lib/weather-rules";
 
-export const MIN_OUTFITS = 1;
+const MIN_OUTFITS = 1;
 export const MAX_OUTFITS = 3;
 
 /** Returns a float in [0, 1), like Math.random. Injected so draws are reproducible in tests. */

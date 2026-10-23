@@ -12,7 +12,7 @@ export type TestUser = {
 
 const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
 
-export function adminClient(): SupabaseClient<Database> {
+function adminClient(): SupabaseClient<Database> {
   if (!localSupabase) throw new Error("Local Supabase is not available");
   return createClient<Database>(localSupabase.url, localSupabase.secretKey, clientOptions);
 }

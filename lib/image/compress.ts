@@ -1,4 +1,4 @@
-export const MAX_PHOTO_DIMENSION = 1000;
+const MAX_PHOTO_DIMENSION = 1000;
 const QUALITY = 0.82;
 
 export type PhotoMimeType = "image/webp" | "image/jpeg";

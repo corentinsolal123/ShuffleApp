@@ -16,7 +16,7 @@ export function seededRandom(seed: number): Random {
 export const OCCASION = { daily: "occ-daily", work: "occ-work", sport: "occ-sport" } as const;
 
 /** A garment that fits every filter unless overridden. */
-export function garment(id: string, category: Garment["category"], patch: Partial<Garment> = {}): Garment {
+function garment(id: string, category: Garment["category"], patch: Partial<Garment> = {}): Garment {
   return {
     id,
     name: id,
