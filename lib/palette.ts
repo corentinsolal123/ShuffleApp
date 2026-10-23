@@ -1,5 +1,5 @@
 // Predefined colour palette. Keys are stored in garments.colors and must stay
-// in sync with the check constraint in supabase/migrations (see tests/unit/palette.test.ts).
+// in sync with public.palette_colors() in supabase/migrations (see tests/unit/palette.test.ts).
 
 export const PALETTE = [
   { key: "black", label: "Noir", swatch: "#000000" },
@@ -27,6 +27,10 @@ export type ColorKey = (typeof PALETTE)[number]["key"];
 export const COLOR_KEYS = PALETTE.map((color) => color.key) as [ColorKey, ...ColorKey[]];
 
 const BY_KEY = new Map<string, (typeof PALETTE)[number]>(PALETTE.map((color) => [color.key, color]));
+
+export function isColorKey(value: string): value is ColorKey {
+  return BY_KEY.has(value);
+}
 
 export function colorLabel(key: ColorKey): string {
   return BY_KEY.get(key)?.label ?? key;

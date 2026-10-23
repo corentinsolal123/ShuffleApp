@@ -4,10 +4,13 @@ import { describe, expect, it } from "vitest";
 import { COLOR_KEYS, PALETTE, colorLabel } from "@/lib/palette";
 
 describe("palette", () => {
-  it("matches the colours allowed by the garments check constraint", () => {
-    const migration = readFileSync(join(process.cwd(), "supabase/migrations/20261024000000_garments.sql"), "utf-8");
-    const allowed = migration.match(/colors <@ array\[([^\]]+)\]/)?.[1];
-    const sqlKeys = [...(allowed ?? "").matchAll(/'([a-z]+)'/g)].map((match) => match[1]);
+  it("matches public.palette_colors() used by the database constraints", () => {
+    const migration = readFileSync(
+      join(process.cwd(), "supabase/migrations/20261025000000_exclusion_rules.sql"),
+      "utf-8",
+    );
+    const body = migration.match(/function public\.palette_colors\(\)[\s\S]*?array\[([^\]]+)\]/)?.[1];
+    const sqlKeys = [...(body ?? "").matchAll(/'([a-z]+)'/g)].map((match) => match[1]);
 
     expect(sqlKeys).toEqual(COLOR_KEYS);
   });

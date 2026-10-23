@@ -132,9 +132,76 @@ export type Database = {
           },
         ];
       };
+      garment_exclusions: {
+        Row: {
+          id: string;
+          user_id: string;
+          garment_a_id: string;
+          garment_b_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          garment_a_id: string;
+          garment_b_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          garment_a_id?: string;
+          garment_b_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "garment_exclusions_garment_a_id_user_id_fkey";
+            columns: ["garment_a_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "garments";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "garment_exclusions_garment_b_id_user_id_fkey";
+            columns: ["garment_b_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "garments";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      color_exclusions: {
+        Row: {
+          id: string;
+          user_id: string;
+          color_a: string;
+          color_b: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          color_a: string;
+          color_b: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          color_a?: string;
+          color_b?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
+      palette_colors: {
+        Args: Record<PropertyKey, never>;
+        Returns: string[];
+      };
       save_garment: {
         Args: {
           p_id: string | null;
