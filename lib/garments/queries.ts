@@ -31,13 +31,3 @@ export async function listGarments(): Promise<GarmentWithPhoto[]> {
 
   return withPhotoUrls(supabase, data.map(toGarment));
 }
-
-export async function getGarment(id: string): Promise<GarmentWithPhoto | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("garments").select(GARMENT_COLUMNS).eq("id", id).maybeSingle();
-  if (error) throw new Error(`Failed to load garment: ${error.message}`);
-  if (!data) return null;
-
-  const [garment] = await withPhotoUrls(supabase, [toGarment(data)]);
-  return garment ?? null;
-}
