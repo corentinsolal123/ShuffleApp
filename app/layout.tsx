@@ -39,7 +39,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={`${interTight.variable} ${bodoniModa.variable} h-full`}>
       <body className="min-h-full">
-        <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV === "development"}>
+        {/* No reload when the connection comes back: it would wipe a form being filled in. */}
+        <SerwistProvider
+          swUrl="/serwist/sw.js"
+          disable={process.env.NODE_ENV === "development"}
+          reloadOnOnline={false}
+        >
           {children}
         </SerwistProvider>
       </body>
