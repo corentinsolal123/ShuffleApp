@@ -1,14 +1,52 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/layout/coming-soon";
+import Link from "next/link";
+import { CategoryTabs } from "@/components/garments/category-tabs";
+import { GarmentGrid } from "@/components/garments/garment-grid";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { listGarments } from "@/lib/garments/queries";
+import { CATEGORIES, CATEGORY_PLURAL_LABELS, isCategory, type Category } from "@/lib/garments/model";
 
 export const metadata: Metadata = { title: "Garde-robe" };
 
-export default function WardrobePage() {
+export default async function WardrobePage({ searchParams }: PageProps<"/wardrobe">) {
+  const { category: rawCategory } = await searchParams;
+  const category = isCategory(rawCategory) ? rawCategory : null;
+
+  // One query for the whole wardrobe: it stays small, and the tabs need every count.
+  const all = await listGarments();
+  const garments = category ? all.filter((garment) => garment.category === category) : all;
+  const counts = Object.fromEntries(
+    CATEGORIES.map((c) => [c, all.filter((garment) => garment.category === c).length]),
+  ) as Record<Category, number>;
+  const newHref = category ? `/wardrobe/new?category=${category}` : "/wardrobe/new";
+
   return (
     <>
-      <PageHeader title="Garde-robe" />
-      <ComingSoon>La gestion des vêtements arrive à l&apos;étape 2.</ComingSoon>
+      <PageHeader
+        title="Garde-robe"
+        action={
+          <Button size="sm" render={<Link href={newHref} />} nativeButton={false}>
+            Ajouter
+          </Button>
+        }
+      />
+      <CategoryTabs active={category} counts={counts} />
+
+      {garments.length > 0 ? (
+        <GarmentGrid garments={garments} />
+      ) : (
+        <div className="flex flex-col items-start gap-4 border p-6">
+          <p className="text-sm text-muted-foreground">
+            {category
+              ? `Aucun vêtement dans « ${CATEGORY_PLURAL_LABELS[category]} » pour l'instant.`
+              : "Votre garde-robe est vide. Commencez par photographier un haut, un bas et une paire de chaussures."}
+          </p>
+          <Button variant="outline" size="sm" render={<Link href={newHref} />} nativeButton={false}>
+            Ajouter un vêtement
+          </Button>
+        </div>
+      )}
     </>
   );
 }
