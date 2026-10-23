@@ -13,7 +13,7 @@ PWA mobile-first pour gérer sa garde-robe et générer, chaque matin, des idée
 - **Météo du jour** : ressenti de 8 h à 18 h et pluie, via la position du téléphone ou la ville par défaut. Le détail heure par heure est accessible.
 - **Réglages** : ville par défaut, occasions (ajout, renommage, suppression avec réaffectation), installation de l'app, déconnexion.
 
-Toutes les données sont privées. La RLS est activée sur chaque table et sur le bucket photos, qui est privé et servi par URLs signées.
+Toutes les données sont privées. La RLS est activée sur chaque table et sur le bucket photos, qui est privé et servi par URLs signées. Les photos étant ré-encodées sur le téléphone, leurs métadonnées EXIF (dont la position GPS) ne sont jamais envoyées.
 
 ## Structure
 
@@ -60,6 +60,7 @@ pnpm dev                     # http://localhost:3000
 - Les emails de connexion arrivent dans la boîte de test : http://127.0.0.1:54324
 - Studio Supabase : http://127.0.0.1:54323
 - Le service worker est désactivé en `pnpm dev`. Pour tester la PWA : `pnpm build && pnpm start`.
+- **Sur un téléphone**, la géolocalisation, le service worker et l'envoi de photos exigent HTTPS : passer par un déploiement Preview Vercel, ou `pnpm dev --experimental-https` (le téléphone doit faire confiance au certificat).
 
 ### Scripts
 
@@ -85,11 +86,12 @@ pnpm dev                     # http://localhost:3000
    pnpm supabase db push
    ```
 3. **Authentification** (Authentication dans le dashboard) :
-   - *Sign In / Providers* : laisser **Email** activé.
+   - *Sign In / Providers* : laisser **Email** activé, avec une **longueur d'OTP de 6** (c'est ce que l'écran de connexion attend).
    - *Emails › Templates* : dans **Confirm signup** et **Magic Link**, remplacer le lien par le code, par exemple `<p>Votre code : <strong>{{ .Token }}</strong></p>`. Le gabarit de `supabase/templates/otp.html` peut servir de base.
    - *URL Configuration* : **Site URL** = l'URL de production (Vercel).
    - *SMTP* : le service d'email intégré est très limité en nombre d'envois. Pour un usage régulier, configurer un SMTP (Resend, Brevo…).
 4. **Clés** (Project Settings › API Keys) : récupérer l'**URL du projet** et la **Publishable key**.
+5. **Fermer les inscriptions** une fois ton compte créé : *Sign In / Providers* › décocher **Allow new users to sign up**. Sans ça, n'importe qui connaissant l'URL peut créer un compte et stocker des photos sur ton projet. L'app affiche alors « Les inscriptions sont fermées » aux inconnus.
 
 Les photos ne demandent aucune configuration supplémentaire : le bucket et ses policies sont dans `supabase/migrations/20261024000000_garments.sql`.
 
