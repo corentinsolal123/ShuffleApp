@@ -57,10 +57,103 @@ export type Database = {
         };
         Relationships: [];
       };
+      garments: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          category: Database["public"]["Enums"]["garment_category"];
+          colors: string[];
+          seasons: Database["public"]["Enums"]["season"][];
+          warmth: number;
+          rain_ok: boolean;
+          photo_path: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          name: string;
+          category: Database["public"]["Enums"]["garment_category"];
+          colors: string[];
+          seasons?: Database["public"]["Enums"]["season"][];
+          warmth: number;
+          rain_ok?: boolean;
+          photo_path: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          category?: Database["public"]["Enums"]["garment_category"];
+          colors?: string[];
+          seasons?: Database["public"]["Enums"]["season"][];
+          warmth?: number;
+          rain_ok?: boolean;
+          photo_path?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      garment_occasions: {
+        Row: {
+          garment_id: string;
+          occasion_id: string;
+          user_id: string;
+        };
+        Insert: {
+          garment_id: string;
+          occasion_id: string;
+          user_id?: string;
+        };
+        Update: {
+          garment_id?: string;
+          occasion_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "garment_occasions_garment_id_user_id_fkey";
+            columns: ["garment_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "garments";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "garment_occasions_occasion_id_user_id_fkey";
+            columns: ["occasion_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "occasions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
-    Enums: { [_ in never]: never };
+    Functions: {
+      save_garment: {
+        Args: {
+          p_id: string | null;
+          p_name: string;
+          p_category: Database["public"]["Enums"]["garment_category"];
+          p_colors: string[];
+          p_seasons: Database["public"]["Enums"]["season"][];
+          p_warmth: number;
+          p_rain_ok: boolean;
+          p_photo_path: string;
+          p_occasion_ids: string[];
+        };
+        Returns: string;
+      };
+    };
+    Enums: {
+      garment_category: "top" | "bottom" | "shoes";
+      season: "spring" | "summer" | "autumn" | "winter";
+    };
     CompositeTypes: { [_ in never]: never };
   };
 };
