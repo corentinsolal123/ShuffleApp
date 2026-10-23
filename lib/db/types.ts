@@ -198,6 +198,10 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      delete_occasion: {
+        Args: { p_id: string; p_replacement_id?: string | null };
+        Returns: undefined;
+      };
       palette_colors: {
         Args: Record<PropertyKey, never>;
         Returns: string[];
