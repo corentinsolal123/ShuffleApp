@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -222,6 +222,33 @@ describe("OutfitGenerator", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(25);
     expect(within(table).getByRole("rowheader", { name: "07:00" })).toBeInTheDocument();
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("00:00");
+  });
+});
+
+describe("OutfitGenerator — resumed the next morning", () => {
+  it("drops yesterday's outfits, whose photo links have expired", async () => {
+    mockForecast();
+    const user = userEvent.setup();
+    renderGenerator();
+    await weatherReady();
+    await user.click(screen.getByRole("button", { name: "Générer" }));
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+
+    const now = Date.now();
+    const spy = vi.spyOn(Date, "now").mockReturnValue(now);
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    spy.mockReturnValue(now + 10 * 60 * 60 * 1000);
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
+    expect(await weatherReady()).toBeInTheDocument();
+    spy.mockRestore();
   });
 });
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { ResumeRefresher } from "@/components/layout/resume-refresher";
 import { requireUserId } from "@/lib/auth/session";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -19,6 +20,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         {children}
       </main>
       <BottomNav />
+      <ResumeRefresher />
     </div>
   );
 }

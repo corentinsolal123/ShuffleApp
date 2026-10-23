@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useOnResume } from "@/components/layout/use-on-resume";
 import { getDevicePosition, type GeolocationFailure } from "@/lib/geolocation";
 import type { City } from "@/lib/profile/model";
 import { WeatherError, fetchDayWeather, type Coordinates, type DayWeather } from "@/lib/weather";
@@ -38,6 +39,10 @@ async function resolveLocation(
 export function useDayWeather(enabled: boolean, fallbackCity: City | null) {
   const [attempt, setAttempt] = useState(0);
   const [settled, setSettled] = useState<{ attempt: number; state: Settled } | null>(null);
+  const retry = () => setAttempt((current) => current + 1);
+
+  // Resumed the next morning: yesterday's forecast no longer applies.
+  useOnResume(retry);
 
   useEffect(() => {
     if (!enabled) return;
@@ -75,5 +80,5 @@ export function useDayWeather(enabled: boolean, fallbackCity: City | null) {
       ? settled.state
       : { status: "loading" };
 
-  return { state, retry: () => setAttempt((current) => current + 1) };
+  return { state, retry };
 }

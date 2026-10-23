@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useOnResume } from "@/components/layout/use-on-resume";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { ChoiceFieldset } from "@/components/ui/choice-fieldset";
@@ -62,6 +63,13 @@ export function OutfitGenerator({
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const weather = useDayWeather(weatherEnabled, defaultCity);
+
+  // After a long absence the shown outfits hold expired photo URLs and an old forecast.
+  useOnResume(() => {
+    setResult(null);
+    setRerollNotice(null);
+    setSeason(seasonForDate(new Date()));
+  });
   const day = weather.state.status === "ready" ? weather.state.weather : null;
   const waitingForWeather = weather.state.status === "loading";
   const occasion = occasions.find((candidate) => candidate.id === occasionId) ?? null;
