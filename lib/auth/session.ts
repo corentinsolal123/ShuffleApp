@@ -3,13 +3,24 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
-/** Returns the signed-in user's id, or redirects to /login. Deduplicated per request. */
-export const requireUserId = cache(async (): Promise<string> => {
+/** Verified JWT claims of the current request, read once per request. */
+const getClaims = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  const userId = data?.claims.sub;
+  return data?.claims ?? null;
+});
+
+/** Returns the signed-in user's id, or redirects to /login. */
+export async function requireUserId(): Promise<string> {
+  const userId = (await getClaims())?.sub;
   if (!userId) {
     redirect("/login");
   }
   return userId;
-});
+}
+
+/** Email of the signed-in user, for display. */
+export async function getSessionEmail(): Promise<string | null> {
+  const email = (await getClaims())?.email;
+  return typeof email === "string" ? email : null;
+}
