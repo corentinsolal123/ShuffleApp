@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { DeleteRuleButton } from "@/components/rules/delete-rule-button";
 import { ColorRuleSide, GarmentRuleSide, RuleRow } from "@/components/rules/rule-rows";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button-link";
 import { listGarments } from "@/lib/garments/queries";
 import { colorLabel } from "@/lib/palette";
 import { listColorExclusions, listGarmentExclusions } from "@/lib/rules/queries";
@@ -94,15 +93,9 @@ function RuleSection({
     <section className="mb-12" aria-label={title}>
       <div className="flex min-h-11 items-center justify-between gap-4 border-b">
         <h2 className="label-caps">{title}</h2>
-        <Button
-          variant="link"
-          size="sm"
-          className="px-0"
-          render={<Link href={addHref} aria-label={addLabel} />}
-          nativeButton={false}
-        >
+        <ButtonLink href={addHref} aria-label={addLabel} variant="link" size="sm" className="px-0">
           Ajouter
-        </Button>
+        </ButtonLink>
       </div>
       {children.length > 0 ? <ul>{children}</ul> : <p className="py-4 text-sm text-muted-foreground">{empty}</p>}
     </section>

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { CategoryTabs } from "@/components/garments/category-tabs";
 import { GarmentGrid } from "@/components/garments/garment-grid";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button-link";
 import { listGarments } from "@/lib/garments/queries";
 import { CATEGORIES, CATEGORY_PLURAL_LABELS, isCategory, type Category } from "@/lib/garments/model";
 
@@ -26,9 +25,9 @@ export default async function WardrobePage({ searchParams }: PageProps<"/wardrob
       <PageHeader
         title="Garde-robe"
         action={
-          <Button size="sm" render={<Link href={newHref} />} nativeButton={false}>
+          <ButtonLink href={newHref} size="sm">
             Ajouter
-          </Button>
+          </ButtonLink>
         }
       />
       <CategoryTabs active={category} counts={counts} />
@@ -42,9 +41,9 @@ export default async function WardrobePage({ searchParams }: PageProps<"/wardrob
               ? `Aucun vêtement dans « ${CATEGORY_PLURAL_LABELS[category]} » pour l'instant.`
               : "Votre garde-robe est vide. Commencez par photographier un haut, un bas et une paire de chaussures."}
           </p>
-          <Button variant="outline" size="sm" render={<Link href={newHref} />} nativeButton={false}>
+          <ButtonLink href={newHref} variant="outline" size="sm">
             Ajouter un vêtement
-          </Button>
+          </ButtonLink>
         </div>
       )}
     </>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { deleteGarmentExclusion } from "@/app/(app)/rules/actions";
 import { GarmentPhoto } from "@/components/garments/garment-photo";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button-link";
 import type { GarmentWithPhoto } from "@/lib/garments/model";
 import { DeleteRuleButton } from "./delete-rule-button";
 
@@ -17,15 +17,15 @@ export function GarmentRulesSection({
     <section aria-label="Ne va jamais avec" className="flex flex-col">
       <div className="flex min-h-11 items-center justify-between gap-4 border-b">
         <h2 className="label-caps">Ne va jamais avec</h2>
-        <Button
+        <ButtonLink
+          href={`/rules/garments/new?garment=${garment.id}`}
+          aria-label="Ajouter une incompatibilité"
           variant="link"
           size="sm"
           className="px-0"
-          render={<Link href={`/rules/garments/new?garment=${garment.id}`} aria-label="Ajouter une incompatibilité" />}
-          nativeButton={false}
         >
           Ajouter
-        </Button>
+        </ButtonLink>
       </div>
       {excluded.length === 0 ? (
         <p className="py-4 text-sm text-muted-foreground">Aucune incompatibilité : ce vêtement va avec tout.</p>
