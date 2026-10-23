@@ -75,16 +75,26 @@ pnpm dev                     # http://localhost:3000
 | `pnpm test:coverage` | Couverture des tests unitaires |
 | `pnpm db:reset` | Recrée la base locale depuis les migrations |
 | `pnpm db:types` | Régénère `lib/db/types.ts` depuis le schéma local |
+| `pnpm db:bundle` | Régénère `supabase/setup.sql` (toutes les migrations, pour le SQL Editor) |
 
 ## Mise en place de Supabase (hébergé)
 
 1. **Créer un projet** sur [supabase.com](https://supabase.com) (région proche, par exemple Paris).
-2. **Appliquer les migrations** : elles créent les tables, les index, la RLS **et** le bucket privé `garments`.
+2. **Créer le schéma** (tables, index, RLS **et** bucket privé `garments`), au choix :
+   - **SQL Editor** (le plus simple) : *SQL Editor › New query*, coller tout le contenu de [`supabase/setup.sql`](supabase/setup.sql), puis *Run*. Le script s'exécute en une seule transaction : en cas d'erreur, rien n'est appliqué.
+   - **CLI** :
+     ```bash
+     pnpm supabase login
+     pnpm supabase link --project-ref <ref-du-projet>
+     pnpm supabase db push
+     ```
+   - **Intégration GitHub de Supabase** : si l'option qui déploie les migrations au merge sur `main` est activée, il n'y a rien à faire, elles s'appliquent toutes seules.
+
+   ⚠️ **Choisir une seule de ces méthodes.** Après un passage par le SQL Editor, la CLI et l'intégration GitHub ignorent que les migrations sont appliquées et tenteraient de les rejouer. Pour passer ensuite à la CLI, il faut d'abord les marquer comme appliquées :
    ```bash
-   pnpm supabase login
-   pnpm supabase link --project-ref <ref-du-projet>
-   pnpm supabase db push
+   pnpm supabase migration repair --status applied 20261023000000 20261024000000 20261025000000 20261026000000
    ```
+   `supabase/setup.sql` est généré depuis `supabase/migrations` par `pnpm db:bundle`, et un test vérifie qu'il reste synchronisé.
 3. **Authentification** (Authentication dans le dashboard) :
    - *Sign In / Providers* : laisser **Email** activé, avec une **longueur d'OTP de 6** (c'est ce que l'écran de connexion attend).
    - *Emails › Templates* : dans **Confirm signup** et **Magic Link**, remplacer le lien par le code, par exemple `<p>Votre code : <strong>{{ .Token }}</strong></p>`. Le gabarit de `supabase/templates/otp.html` peut servir de base.
