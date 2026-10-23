@@ -1,10 +1,14 @@
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [tsconfigPaths(), react()],
+  plugins: [react()],
+  resolve: { tsconfigPaths: true },
   test: {
+    coverage: {
+      include: ["lib/**/*.ts"],
+      exclude: ["lib/db/types.ts", "lib/**/queries.ts", "lib/supabase/**"],
+    },
     projects: [
       {
         // Pure business logic (outfit engine, weather rules, ...).
