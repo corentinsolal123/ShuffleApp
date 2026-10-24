@@ -54,7 +54,7 @@ export function InstallHint() {
       </h2>
       {installPrompt ? (
         <>
-          <p className="text-sm text-muted-foreground">Ajoutez Dressing à l&apos;écran d&apos;accueil pour l&apos;ouvrir en un geste.</p>
+          <p className="text-sm text-muted-foreground">Ajoutez Shuffle à l&apos;écran d&apos;accueil pour l&apos;ouvrir en un geste.</p>
           <Button
             variant="outline"
             onClick={async () => {

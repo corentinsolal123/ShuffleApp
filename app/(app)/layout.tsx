@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <header className="sticky top-0 z-40 border-b bg-background pt-safe-top">
         <div className="mx-auto flex h-14 max-w-lg items-center justify-center px-4">
           <Link href="/" className="font-display text-2xl tracking-wide">
-            Dressing
+            Shuffle
           </Link>
         </div>
       </header>

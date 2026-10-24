@@ -14,12 +14,12 @@ const bodoniModa = Bodoni_Moda({
 });
 
 export const metadata: Metadata = {
-  applicationName: "Dressing",
-  title: { default: "Dressing", template: "%s — Dressing" },
+  applicationName: "Shuffle",
+  title: { default: "Shuffle", template: "%s — Shuffle" },
   description: "Votre garde-robe et des idées de tenues chaque matin.",
   appleWebApp: {
     capable: true,
-    title: "Dressing",
+    title: "Shuffle",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },

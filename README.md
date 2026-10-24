@@ -1,4 +1,4 @@
-# Dressing
+# Shuffle
 
 PWA mobile-first pour gérer sa garde-robe et générer, chaque matin, des idées de tenues adaptées à la météo.
 
@@ -97,9 +97,9 @@ pnpm dev                     # http://localhost:3000
    `supabase/setup.sql` est généré depuis `supabase/migrations` par `pnpm db:bundle`, et un test vérifie qu'il reste synchronisé.
 3. **Authentification** (Authentication dans le dashboard) :
    - *Sign In / Providers* : laisser **Email** activé, avec une **longueur d'OTP de 6** (c'est ce que l'écran de connexion attend).
-   - *Emails › Templates* : dans **Confirm signup** et **Magic Link**, remplacer le lien par le code, par exemple `<p>Votre code : <strong>{{ .Token }}</strong></p>`. Le gabarit de `supabase/templates/otp.html` peut servir de base.
+   - *Emails › **SMTP Settings*** : **obligatoire**. Sans SMTP personnalisé, Supabase n'autorise pas la modification des gabarits et n'envoie qu'un lien, alors que l'app attend un code. Un service gratuit suffit, par exemple [Resend](https://resend.com) : hôte `smtp.resend.com`, port `465`, utilisateur `resend`, mot de passe = la clé API, expéditeur `onboarding@resend.dev`. Sans domaine vérifié, Resend n'envoie qu'à l'adresse de ton compte Resend, ce qui suffit pour un usage perso.
+   - *Emails › Templates* : coller [`supabase/templates/otp.html`](supabase/templates/otp.html) dans **Magic link or OTP** (sujet « Votre code de connexion Shuffle ») et [`supabase/templates/confirm-signup.html`](supabase/templates/confirm-signup.html) dans **Confirm signup** (sujet « Bienvenue sur Shuffle : votre code »). Les deux affichent le code via `{{ .Token }}`.
    - *URL Configuration* : **Site URL** = l'URL de production (Vercel).
-   - *SMTP* : le service d'email intégré est très limité en nombre d'envois. Pour un usage régulier, configurer un SMTP (Resend, Brevo…).
 4. **Clés** (Project Settings › API Keys) : récupérer l'**URL du projet** et la **Publishable key**.
 5. **Fermer les inscriptions** une fois ton compte créé : *Sign In / Providers* › décocher **Allow new users to sign up**. Sans ça, n'importe qui connaissant l'URL peut créer un compte et stocker des photos sur ton projet. L'app affiche alors « Les inscriptions sont fermées » aux inconnus.
 
@@ -127,7 +127,7 @@ Chaque push sur la branche principale redéploie. Le service worker est génér�
 **iPhone (Safari)**
 1. Ouvrir l'URL de l'app dans **Safari**.
 2. Toucher **Partager** (carré avec une flèche), puis **Sur l'écran d'accueil**, puis **Ajouter**.
-3. Ouvrir Dressing depuis l'écran d'accueil et se connecter avec le code reçu par email. La session de l'app installée est indépendante de celle de Safari.
+3. Ouvrir Shuffle depuis l'écran d'accueil et se connecter avec le code reçu par email. La session de l'app installée est indépendante de celle de Safari.
 4. Autoriser la localisation à la première génération, ou définir une ville par défaut dans les Réglages.
 
 **Android (Chrome)**

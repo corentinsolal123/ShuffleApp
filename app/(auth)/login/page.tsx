@@ -7,7 +7,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-12 px-6 pt-safe-top pb-safe-bottom">
       <header className="flex flex-col gap-3">
-        <h1 className="font-display text-5xl">Dressing</h1>
+        <h1 className="font-display text-5xl">Shuffle</h1>
         <p className="label-caps text-muted-foreground">Connexion</p>
       </header>
       <LoginForm />

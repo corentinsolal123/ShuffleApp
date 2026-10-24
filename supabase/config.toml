@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "dressing"
+project_id = "shuffle"
 
 [api]
 enabled = true
@@ -247,11 +247,11 @@ otp_expiry = 3600
 # OTP code emails (the app asks for the 6-digit code, not a link).
 # New users receive the "confirmation" template, existing users "magic_link".
 [auth.email.template.confirmation]
-subject = "Votre code Dressing"
-content_path = "./supabase/templates/otp.html"
+subject = "Bienvenue sur Shuffle : votre code"
+content_path = "./supabase/templates/confirm-signup.html"
 
 [auth.email.template.magic_link]
-subject = "Votre code Dressing"
+subject = "Votre code de connexion Shuffle"
 content_path = "./supabase/templates/otp.html"
 
 # Uncomment to customize notification email template
