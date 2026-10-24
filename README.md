@@ -36,6 +36,7 @@ supabase/
   migrations/            schéma SQL versionné : tables, index, RLS, bucket
   templates/otp.html     email avec le code à 6 chiffres (local)
 tests/                   unit/ · integration/ · rls/
+.github/workflows/       CI · déploiement des migrations
 ```
 
 ### Réglages du moteur
@@ -71,30 +72,15 @@ pnpm dev                     # http://localhost:3000
 | `pnpm test` | Tous les tests Vitest |
 | `pnpm test:unit` | Logique métier pure (moteur, météo, validation…) |
 | `pnpm test:integration` | Écrans rendus dans jsdom, réseau simulé avec MSW |
-| `pnpm test:rls` | Policies RLS et fonctions SQL contre le Supabase local (ignorés s'il n'est pas démarré) |
+| `pnpm test:rls` | Policies RLS et fonctions SQL contre le Supabase local (ignorés s'il n'est pas démarré, sauf en CI) |
 | `pnpm test:coverage` | Couverture des tests unitaires |
 | `pnpm db:reset` | Recrée la base locale depuis les migrations |
 | `pnpm db:types` | Régénère `lib/db/types.ts` depuis le schéma local |
-| `pnpm db:bundle` | Régénère `supabase/setup.sql` (toutes les migrations, pour le SQL Editor) |
 
 ## Mise en place de Supabase (hébergé)
 
 1. **Créer un projet** sur [supabase.com](https://supabase.com) (région proche, par exemple Paris).
-2. **Créer le schéma** (tables, index, RLS **et** bucket privé `garments`), au choix :
-   - **SQL Editor** (le plus simple) : *SQL Editor › New query*, coller tout le contenu de [`supabase/setup.sql`](supabase/setup.sql), puis *Run*. Le script s'exécute en une seule transaction : en cas d'erreur, rien n'est appliqué.
-   - **CLI** :
-     ```bash
-     pnpm supabase login
-     pnpm supabase link --project-ref <ref-du-projet>
-     pnpm supabase db push
-     ```
-   - **Intégration GitHub de Supabase** : si l'option qui déploie les migrations au merge sur `main` est activée, il n'y a rien à faire, elles s'appliquent toutes seules.
-
-   ⚠️ **Choisir une seule de ces méthodes.** Après un passage par le SQL Editor, la CLI et l'intégration GitHub ignorent que les migrations sont appliquées et tenteraient de les rejouer. Pour passer ensuite à la CLI, il faut d'abord les marquer comme appliquées :
-   ```bash
-   pnpm supabase migration repair --status applied 20261023000000 20261024000000 20261025000000 20261026000000
-   ```
-   `supabase/setup.sql` est généré depuis `supabase/migrations` par `pnpm db:bundle`, et un test vérifie qu'il reste synchronisé.
+2. **Créer le schéma** (tables, index, RLS **et** bucket privé `garments`) : c'est le workflow GitHub [Deploy migrations](.github/workflows/migrations.yml) qui applique `supabase/migrations` (voir [Intégration continue](#intégration-continue)). Sur un projet vide, le lancer une fois à la main : *Actions › Deploy migrations › Run workflow*.
 3. **Authentification** (Authentication dans le dashboard) :
    - *Sign In / Providers* : laisser **Email** activé, avec une **longueur d'OTP de 6** (c'est ce que l'écran de connexion attend).
    - *Emails › **SMTP Settings*** : **obligatoire**. Sans SMTP personnalisé, Supabase n'autorise pas la modification des gabarits et n'envoie qu'un lien, alors que l'app attend un code. Un service gratuit suffit, par exemple [Resend](https://resend.com) : hôte `smtp.resend.com`, port `465`, utilisateur `resend`, mot de passe = la clé API, expéditeur `onboarding@resend.dev`. Sans domaine vérifié, Resend n'envoie qu'à l'adresse de ton compte Resend, ce qui suffit pour un usage perso.
@@ -104,6 +90,35 @@ pnpm dev                     # http://localhost:3000
 5. **Fermer les inscriptions** une fois ton compte créé : *Sign In / Providers* › décocher **Allow new users to sign up**. Sans ça, n'importe qui connaissant l'URL peut créer un compte et stocker des photos sur ton projet. L'app affiche alors « Les inscriptions sont fermées » aux inconnus.
 
 Les photos ne demandent aucune configuration supplémentaire : le bucket et ses policies sont dans `supabase/migrations/20261024000000_garments.sql`.
+
+## Intégration continue
+
+Deux workflows GitHub Actions :
+
+| Workflow | Quand | Ce qu'il fait |
+| --- | --- | --- |
+| [CI](.github/workflows/ci.yml) | Chaque push, sur toutes les branches | Lint, typecheck, tests unitaires et d'intégration, `next build`. En parallèle : démarre un Supabase local (ce qui applique toutes les migrations sur une base vide), puis lance les tests RLS. |
+| [Deploy migrations](.github/workflows/migrations.yml) | Push sur `main` qui touche `supabase/migrations`, ou à la main | `supabase db push` vers le projet de production : applique uniquement les migrations pas encore appliquées. |
+
+Vercel déploie le même commit en parallèle : une migration doit rester compatible avec la version de l'app déjà en ligne (ajouter une colonne puis s'en servir dans une PR suivante, plutôt que renommer d'un coup).
+
+**Configuration** (*Settings › Environments › New environment* `production`) :
+
+| Nom | Type | Valeur |
+| --- | --- | --- |
+| `SUPABASE_PROJECT_ID` | Variable | Référence du projet (`https://<ref>.supabase.co`) |
+| `SUPABASE_ACCESS_TOKEN` | Secret | Jeton personnel : [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens) |
+| `SUPABASE_DB_PASSWORD` | Secret | Mot de passe de la base (*Project Settings › Database*) |
+
+Optionnel : ajouter des *Required reviewers* à l'environnement pour valider chaque déploiement de migrations, et rendre le check **CI** obligatoire sur `main` (*Settings › Branches*).
+
+**Projet dont le schéma a été créé à la main** (ancien `setup.sql` collé dans le SQL Editor) : son historique de migrations est vide, et `db push` tenterait de tout rejouer. Marquer d'abord les migrations existantes comme appliquées, une seule fois :
+
+```bash
+pnpm supabase login
+pnpm supabase link --project-ref <ref-du-projet>
+pnpm supabase migration repair --status applied 20261023000000 20261024000000 20261025000000 20261026000000
+```
 
 ## Variables d'environnement
 
@@ -120,7 +135,7 @@ Open-Meteo (météo et recherche de ville) ne demande aucune clé. Aucune clé s
 2. Ajouter les deux variables d'environnement ci-dessus (Production et Preview).
 3. Déployer, puis reporter l'URL obtenue dans **Site URL** côté Supabase.
 
-Chaque push sur la branche principale redéploie. Le service worker est généré au build.
+Chaque push sur la branche principale redéploie. Le service worker est généré au build. Les migrations de base suivent via GitHub Actions (voir [Intégration continue](#intégration-continue)).
 
 ## Installer la PWA
 

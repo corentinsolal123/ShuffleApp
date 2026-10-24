@@ -50,6 +50,8 @@ export default async function setup(project: TestProject) {
   const credentials = readCredentials();
   const available = credentials !== null && (await isReachable(credentials));
   if (!available) {
+    // In CI the RLS suite must run, never be silently skipped.
+    if (process.env.CI) throw new Error("[rls] No local Supabase reachable.");
     console.warn("[rls] No local Supabase reachable: RLS tests are skipped. Run `pnpm supabase start`.");
   }
   project.provide("supabase", available ? credentials : null);

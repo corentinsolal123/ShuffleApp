@@ -1,0 +1,41 @@
+name: Deploy migrations
+
+# Applies pending supabase/migrations to the production project once they are
+# on main. Migrations must stay compatible with the app version already
+# deployed, since Vercel deploys the same commit in parallel.
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/migrations/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: migrations-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: supabase db push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Holds the secrets; add required reviewers in its settings to approve each run.
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      - name: Pending migrations
+        run: pnpm supabase db push --dry-run
+      - run: pnpm supabase db push
