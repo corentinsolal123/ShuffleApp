@@ -6,3 +6,7 @@ ignoredBuiltDependencies:
 onlyBuiltDependencies:
   - esbuild
   - supabase
+
+overrides:
+  # GHSA-mrhx-c7xc-m3w5, pulled in by @serwist/turbopack.
+  zod: ^4.6.7

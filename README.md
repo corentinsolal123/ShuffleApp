@@ -30,8 +30,9 @@ lib/
   weather.ts             Open-Meteo + résumé de la journée (configurable)
   garments/ rules/ occasions/ profile/   modèles, validation, requêtes
   supabase/              clients navigateur / serveur / proxy
+  security/csp.ts        Content-Security-Policy (nonce par requête)
   db/types.ts            types du schéma
-proxy.ts                 rafraîchit la session et protège les routes
+proxy.ts                 rafraîchit la session, protège les routes, pose la CSP
 supabase/
   migrations/            schéma SQL versionné : tables, index, RLS, bucket
   templates/otp.html     email avec le code à 6 chiffres (local)
@@ -72,8 +73,8 @@ pnpm dev                     # http://localhost:3000
 | `pnpm test` | Tous les tests Vitest |
 | `pnpm test:unit` | Logique métier pure (moteur, météo, validation…) |
 | `pnpm test:integration` | Écrans rendus dans jsdom, réseau simulé avec MSW |
-| `pnpm test:rls` | Policies RLS et fonctions SQL contre le Supabase local (ignorés s'il n'est pas démarré, sauf en CI) |
-| `pnpm test:coverage` | Couverture des tests unitaires |
+| `pnpm test:rls` | Policies RLS, fonctions SQL et server actions contre le Supabase local (ignorés s'il n'est pas démarré, sauf en CI) |
+| `pnpm test:coverage` | Couverture des tests unitaires, avec un seuil minimal (`vitest.config.mts`) |
 | `pnpm db:reset` | Recrée la base locale depuis les migrations |
 | `pnpm db:types` | Régénère `lib/db/types.ts` depuis le schéma local |
 
@@ -93,12 +94,15 @@ Les photos ne demandent aucune configuration supplémentaire : le bucket et ses 
 
 ## Intégration continue
 
-Deux workflows GitHub Actions :
+Trois workflows GitHub Actions :
 
 | Workflow | Quand | Ce qu'il fait |
 | --- | --- | --- |
-| [CI](.github/workflows/ci.yml) | Chaque push, sur toutes les branches | Lint, typecheck, tests unitaires et d'intégration, `next build`. En parallèle : démarre un Supabase local (ce qui applique toutes les migrations sur une base vide), puis lance les tests RLS. |
+| [CI](.github/workflows/ci.yml) | Chaque push, sur toutes les branches | `pnpm audit` (dépendances de prod, niveau high), lint, typecheck, tests unitaires avec seuil de couverture, tests d'intégration, `next build`. En parallèle : démarre un Supabase local (ce qui applique toutes les migrations sur une base vide), puis lance les tests RLS et des server actions. |
+| [CodeQL](.github/workflows/codeql.yml) | PR, push sur `main`, chaque lundi | Analyse de sécurité du code TypeScript et des workflows. Résultats dans *Security › Code scanning*. |
 | [Deploy migrations](.github/workflows/migrations.yml) | Push sur `main` qui touche `supabase/migrations`, ou à la main | `supabase db push` vers le projet de production : applique uniquement les migrations pas encore appliquées. |
+
+[Dependabot](.github/dependabot.yml) ouvre chaque semaine une PR groupée pour les mises à jour mineures des dépendances, et chaque mois pour les actions GitHub (épinglées par SHA).
 
 Vercel déploie le même commit en parallèle : une migration doit rester compatible avec la version de l'app déjà en ligne (ajouter une colonne puis s'en servir dans une PR suivante, plutôt que renommer d'un coup).
 

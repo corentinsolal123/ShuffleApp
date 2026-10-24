@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { saveGarmentErrorMessage } from "@/lib/garments/errors";
 import { toGarment, type GarmentRow } from "@/lib/garments/mapper";
 import { isCategory } from "@/lib/garments/model";
-import { photoPath } from "@/lib/garments/photo";
+import { isOwnPhotoPath, photoPath } from "@/lib/garments/photo";
 import { fieldErrors, garmentInputSchema, type GarmentInput } from "@/lib/garments/schema";
 
 const USER_ID = "8f0c1a52-3f0e-4c1e-9a43-0e7d2b8a4c11";
@@ -90,6 +90,26 @@ describe("photoPath", () => {
 
   it("rejects other formats", () => {
     expect(() => photoPath(USER_ID, "image/png")).toThrow("Unsupported photo type");
+  });
+});
+
+describe("isOwnPhotoPath", () => {
+  const file = "0b6d2f4e-5c1a-4b8e-9f3d-2a7c6e1b9d40.webp";
+
+  it("accepts a path built by photoPath for this user", () => {
+    expect(isOwnPhotoPath(USER_ID, photoPath(USER_ID, "image/webp"))).toBe(true);
+    expect(isOwnPhotoPath(USER_ID, photoPath(USER_ID, "image/jpeg"))).toBe(true);
+  });
+
+  it.each([
+    ["another user's folder", `00000000-0000-4000-8000-000000000000/${file}`],
+    ["a parent folder", `${USER_ID}/../00000000-0000-4000-8000-000000000000/${file}`],
+    ["a sub-folder", `${USER_ID}/sub/${file}`],
+    ["an unexpected file name", `${USER_ID}/photo.webp`],
+    ["another extension", `${USER_ID}/${file.replace(".webp", ".svg")}`],
+    ["the bare folder", `${USER_ID}/`],
+  ])("rejects %s", (_, path) => {
+    expect(isOwnPhotoPath(USER_ID, path)).toBe(false);
   });
 });
 

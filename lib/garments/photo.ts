@@ -16,3 +16,11 @@ export function photoPath(userId: string, mimeType: string, id: string = crypto.
   }
   return `${userId}/${id}.${extension}`;
 }
+
+const PHOTO_FILE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:webp|jpg)$/;
+
+/** True for a path built by `photoPath` for this user: no other folder, no `..`. */
+export function isOwnPhotoPath(userId: string, path: string): boolean {
+  const [folder, file, ...rest] = path.split("/");
+  return folder === userId && rest.length === 0 && file !== undefined && PHOTO_FILE.test(file);
+}

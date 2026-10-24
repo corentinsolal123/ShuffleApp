@@ -8,6 +8,8 @@ export default defineConfig({
     coverage: {
       include: ["lib/**/*.ts"],
       exclude: ["lib/db/types.ts", "lib/**/queries.ts", "lib/supabase/**"],
+      // Floor just under the current level: CI fails if coverage drops.
+      thresholds: { statements: 85, branches: 83, functions: 80, lines: 84 },
     },
     projects: [
       {
