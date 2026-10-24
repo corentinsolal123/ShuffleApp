@@ -1,5 +1,5 @@
 {
-  "name": "dressing",
+  "name": "shuffle",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,7 +16,8 @@
     "test:coverage": "vitest run --project unit --coverage",
     "supabase": "supabase",
     "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript --local > lib/db/types.ts"
+    "db:types": "supabase gen types typescript --local > lib/db/types.ts",
+    "db:bundle": "node scripts/bundle-migrations.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

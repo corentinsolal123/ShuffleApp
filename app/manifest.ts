@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Dressing",
-    short_name: "Dressing",
+    name: "Shuffle",
+    short_name: "Shuffle",
     description: "Votre garde-robe et des idées de tenues chaque matin.",
     lang: "fr",
     start_url: "/",
