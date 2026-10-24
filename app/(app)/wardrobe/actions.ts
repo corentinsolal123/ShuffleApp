@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUserId } from "@/lib/auth/session";
 import { saveGarmentErrorMessage } from "@/lib/garments/errors";
-import { GARMENT_PHOTOS_BUCKET } from "@/lib/garments/photo";
+import { GARMENT_PHOTOS_BUCKET, isOwnPhotoPath } from "@/lib/garments/photo";
 import { fieldErrors, garmentInputSchema, type GarmentFieldErrors, type GarmentInput } from "@/lib/garments/schema";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,7 +26,7 @@ export async function saveGarment(input: GarmentInput): Promise<SaveGarmentResul
     return { ok: false, error: "Vérifiez le formulaire.", fieldErrors: fieldErrors(parsed.error) };
   }
   const garment = parsed.data;
-  if (!garment.photoPath.startsWith(`${userId}/`)) {
+  if (!isOwnPhotoPath(userId, garment.photoPath)) {
     return { ok: false, error: "Photo invalide." };
   }
 

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bodoni_Moda, Inter_Tight } from "next/font/google";
+import { connection } from "next/server";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import "./globals.css";
 
@@ -35,7 +36,10 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Rendered on demand so that every page gets the CSP nonce (see proxy.ts).
+  await connection();
+
   return (
     <html lang="fr" className={`${interTight.variable} ${bodoniModa.variable} h-full`}>
       <body className="min-h-full">
