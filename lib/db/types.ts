@@ -247,7 +247,7 @@ export type Database = {
       };
     };
     Enums: {
-      garment_category: "top" | "bottom" | "shoes";
+      garment_category: "top" | "bottom" | "shoes" | "outerwear";
       season: "spring" | "summer" | "autumn" | "winter";
     };
     CompositeTypes: { [_ in never]: never };

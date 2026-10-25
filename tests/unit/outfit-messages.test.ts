@@ -33,14 +33,23 @@ describe("blockReasonMessage", () => {
 
 describe("noteMessage", () => {
   it("explains the relaxed light-pieces preference", () => {
-    expect(noteMessage({ kind: "light_preference_relaxed" })).toContain("pas assez de pièces légères");
+    expect(noteMessage({ kind: "light_preference_relaxed" }, context)).toContain("pas assez de pièces légères");
+  });
+
+  it.each([
+    ["missing", "La météo demande une veste ou un manteau, mais votre garde-robe n'en a aucun. Tenues proposées sans manteau."],
+    ["warmth", "Aucun manteau adapté pour 2 °C ressentis. Tenues proposées sans manteau."],
+    ["rain", "Aucun manteau imperméable. Tenues proposées sans manteau."],
+    ["rules", "Vos règles excluent tous les manteaux adaptés. Tenues proposées sans manteau."],
+  ] as const)("explains why the outerwear was skipped (%s)", (cause, message) => {
+    expect(noteMessage({ kind: "outerwear_skipped", cause }, context)).toBe(message);
   });
 
   it("handles singular and plural", () => {
-    expect(noteMessage({ kind: "fewer_than_requested", requested: 3, available: 1 })).toBe(
+    expect(noteMessage({ kind: "fewer_than_requested", requested: 3, available: 1 }, context)).toBe(
       "Une seule tenue possible avec ces filtres.",
     );
-    expect(noteMessage({ kind: "fewer_than_requested", requested: 3, available: 2 })).toBe(
+    expect(noteMessage({ kind: "fewer_than_requested", requested: 3, available: 2 }, context)).toBe(
       "Seulement 2 tenues possibles avec ces filtres.",
     );
   });

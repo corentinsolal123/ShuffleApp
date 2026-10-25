@@ -19,7 +19,17 @@ export type WeatherRuleConfig = {
   hot: { above: number; preferredWarmth: Partial<Record<Category, Warmth>> };
   /** Categories that must be rain-proof when rain is expected. */
   rainProofCategories: readonly Category[];
+  /**
+   * When an outerwear piece is added, and which warmth levels suit it.
+   * Checked from coldest to mildest; above the mildest threshold, no outerwear.
+   */
+  outerwear: readonly ({ below: number } & WarmthRange)[];
+  /** Outerwear for a rainy day too mild for the thresholds above. */
+  rainOuterwear: WarmthRange;
 };
+
+/** Inclusive range of acceptable warmth levels. */
+export type WarmthRange = { minWarmth: Warmth; maxWarmth: Warmth };
 
 export const DEFAULT_WEATHER_RULES: WeatherRuleConfig = {
   cold: [
@@ -27,16 +37,24 @@ export const DEFAULT_WEATHER_RULES: WeatherRuleConfig = {
     { below: 10, minWarmth: { top: 2, bottom: 2 } },
   ],
   hot: { above: 22, preferredWarmth: { top: 1, bottom: 1 } },
-  rainProofCategories: ["shoes"],
+  rainProofCategories: ["shoes", "outerwear"],
+  outerwear: [
+    { below: 3, minWarmth: 3, maxWarmth: 3 },
+    { below: 10, minWarmth: 2, maxWarmth: 3 },
+    { below: 17, minWarmth: 1, maxWarmth: 2 },
+  ],
+  rainOuterwear: { minWarmth: 1, maxWarmth: 2 },
 };
 
 export type WeatherConstraints = {
   minWarmth: Partial<Record<Category, Warmth>>;
   preferredWarmth: Partial<Record<Category, Warmth>>;
   rainProof: readonly Category[];
+  /** Outerwear to add to the outfit, or null when it is neither cold nor rainy (or no weather). */
+  outerwear: WarmthRange | null;
 };
 
-const NO_CONSTRAINTS: WeatherConstraints = { minWarmth: {}, preferredWarmth: {}, rainProof: [] };
+const NO_CONSTRAINTS: WeatherConstraints = { minWarmth: {}, preferredWarmth: {}, rainProof: [], outerwear: null };
 
 /** Turns the day's weather into garment constraints. No weather means no constraint. */
 export function weatherConstraints(
@@ -45,12 +63,16 @@ export function weatherConstraints(
 ): WeatherConstraints {
   if (!weather) return NO_CONSTRAINTS;
 
-  const cold = [...rules.cold].sort((a, b) => a.below - b.below).find((rule) => weather.feelsLike < rule.below);
+  const coldest = <T extends { below: number }>(thresholds: readonly T[]) =>
+    [...thresholds].sort((a, b) => a.below - b.below).find((rule) => weather.feelsLike < rule.below);
+  const cold = coldest(rules.cold);
+  const outerwear = coldest(rules.outerwear) ?? (weather.rain ? rules.rainOuterwear : undefined);
   const hot = weather.feelsLike > rules.hot.above;
 
   return {
     minWarmth: cold?.minWarmth ?? {},
     preferredWarmth: hot ? rules.hot.preferredWarmth : {},
     rainProof: weather.rain ? rules.rainProofCategories : [],
+    outerwear: outerwear ? { minWarmth: outerwear.minWarmth, maxWarmth: outerwear.maxWarmth } : null,
   };
 }

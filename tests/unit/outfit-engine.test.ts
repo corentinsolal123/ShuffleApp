@@ -12,9 +12,10 @@ import {
 } from "@/lib/outfit-engine";
 import { pairKey } from "@/lib/rules/model";
 import { DEFAULT_WEATHER_RULES, weatherConstraints } from "@/lib/weather-rules";
-import { NO_RULES, OCCASION, bottom, seededRandom, shoes, top } from "./helpers/fixtures";
+import { NO_RULES, OCCASION, bottom, outerwear, seededRandom, shoes, top } from "./helpers/fixtures";
 
-const MILD: OutfitFilters = { season: "spring", weather: { feelsLike: 15, rain: false } };
+/** Mild enough for no outerwear, so the core tests are not about it. */
+const MILD: OutfitFilters = { season: "spring", weather: { feelsLike: 18, rain: false } };
 
 function input(garments: Garment[], filters: Partial<OutfitFilters> = {}, rules: OutfitRules = NO_RULES): EngineInput {
   return { garments, rules, filters: { ...MILD, ...filters } };
@@ -242,12 +243,90 @@ describe("weather", () => {
 
 describe("weatherConstraints", () => {
   it("returns no constraint without weather", () => {
-    expect(weatherConstraints(null)).toEqual({ minWarmth: {}, preferredWarmth: {}, rainProof: [] });
+    expect(weatherConstraints(null)).toEqual({ minWarmth: {}, preferredWarmth: {}, rainProof: [], outerwear: null });
   });
 
   it("picks the coldest matching rule whatever the configuration order", () => {
     const config = { ...DEFAULT_WEATHER_RULES, cold: [...DEFAULT_WEATHER_RULES.cold].reverse() };
     expect(weatherConstraints({ feelsLike: 0, rain: false }, config).minWarmth).toEqual({ top: 3, bottom: 2 });
+  });
+});
+
+describe("outerwear", () => {
+  // Warm enough not to be filtered out on the coldest days.
+  const core = [top("t", { warmth: 3 }), bottom("b"), shoes("s")];
+  const coats = [
+    outerwear("o-light", { warmth: 1 }),
+    outerwear("o-mid", { warmth: 2 }),
+    outerwear("o-warm", { warmth: 3 }),
+  ];
+  const at = (feelsLike: number, rain = false) => ({ weather: { feelsLike, rain } });
+  const coatsAt = (feelsLike: number, rain = false, wardrobe = [...core, ...coats]) => {
+    const analysis = analyzeOutfits(input(wardrobe, at(feelsLike, rain)));
+    return analysis.ok ? new Set(analysis.outfits.map((outfit) => outfit.outerwear?.id ?? null)) : null;
+  };
+
+  it("adds no outerwear from 17 °C without rain, nor without weather", () => {
+    expect(coatsAt(17)).toEqual(new Set([null]));
+    expect(coatsAt(25)).toEqual(new Set([null]));
+    expect(allOutfitKeys(input([...core, ...coats], { weather: null }))).toEqual(["t|b|s"]);
+  });
+
+  it("picks the outerwear warmth from the temperature", () => {
+    expect(coatsAt(16.9)).toEqual(new Set(["o-light", "o-mid"]));
+    expect(coatsAt(10)).toEqual(new Set(["o-light", "o-mid"]));
+    expect(coatsAt(9.9)).toEqual(new Set(["o-mid", "o-warm"]));
+    expect(coatsAt(2.9)).toEqual(new Set(["o-warm"]));
+  });
+
+  it("adds the outerwear to every outfit and to its key", () => {
+    const result = generateOutfits(input([...core, ...coats], at(0)), 1, seededRandom(1));
+    expect(result).toMatchObject({ ok: true, notes: [], outfits: [{ outerwear: { id: "o-warm" } }] });
+    if (result.ok) expect(outfitKey(result.outfits[0]!)).toBe("t|b|s|o-warm");
+  });
+
+  it("requires rain-proof outerwear when rain is expected", () => {
+    const wardrobe = [...core, outerwear("o-dry", { rainOk: false }), outerwear("o-rain", { rainOk: true })];
+    expect(coatsAt(12, true, wardrobe)).toEqual(new Set(["o-rain"]));
+  });
+
+  it("adds a light or medium rain-proof outerwear on a mild rainy day", () => {
+    const wardrobe = [...core, ...coats, outerwear("o-dry", { warmth: 1, rainOk: false })];
+    expect(coatsAt(20, true, wardrobe)).toEqual(new Set(["o-light", "o-mid"]));
+    expect(coatsAt(30, true, wardrobe)).toEqual(new Set(["o-light", "o-mid"]));
+  });
+
+  it("applies the season, occasion and exclusion rules to the outerwear", () => {
+    const wardrobe = [
+      ...core,
+      outerwear("o-summer", { seasons: ["summer"] }),
+      outerwear("o-work", { occasionIds: [OCCASION.work] }),
+      outerwear("o-ok"),
+      outerwear("o-red", { colors: ["red"] }),
+    ];
+    const rules: OutfitRules = { garmentExclusions: [], colorExclusions: [{ id: "c", colors: ["grey", "red"] }] };
+    const analysis = analyzeOutfits(input(wardrobe, { ...at(12), occasionId: OCCASION.daily }, rules));
+    expect(analysis.ok && analysis.outfits.map(outfitKey)).toEqual(["t|b|s|o-ok"]);
+  });
+
+  it("keeps the outfits without outerwear, with a note, when none fits", () => {
+    const note = (wardrobe: Garment[], feelsLike: number, rules: OutfitRules = NO_RULES) => {
+      const analysis = analyzeOutfits(input(wardrobe, at(feelsLike), rules));
+      expect(analysis.ok && analysis.outfits.map(outfitKey)).toEqual(["t|b|s"]);
+      return analysis.ok ? analysis.notes : null;
+    };
+
+    expect(note(core, 5)).toEqual([{ kind: "outerwear_skipped", cause: "missing" }]);
+    expect(note([...core, outerwear("o-light", { warmth: 1 })], 0)).toEqual([
+      { kind: "outerwear_skipped", cause: "warmth" },
+    ]);
+    expect(
+      note([...core, outerwear("o")], 12, { garmentExclusions: [{ id: "g", garmentIds: ["o", "t"] }], colorExclusions: [] }),
+    ).toEqual([{ kind: "outerwear_skipped", cause: "rules" }]);
+  });
+
+  it("never blocks an outfit because of a missing outerwear category", () => {
+    expect(analyzeOutfits(input(core, at(-5))).ok).toBe(true);
   });
 });
 
@@ -419,8 +498,9 @@ describe("property: every proposed outfit satisfies the filters and the rules", 
   function randomWardrobe(random: () => number): Garment[] {
     const pick = <T,>(items: readonly T[]) => items[Math.floor(random() * items.length)]!;
     const garments: Garment[] = [];
-    for (const category of ["top", "bottom", "shoes"] as const) {
-      const count = 1 + Math.floor(random() * 6);
+    for (const category of ["top", "bottom", "shoes", "outerwear"] as const) {
+      // Outerwear is optional: some wardrobes have none.
+      const count = category === "outerwear" ? Math.floor(random() * 4) : 1 + Math.floor(random() * 6);
       for (let i = 0; i < count; i++) {
         garments.push({
           id: `${category}-${i}`,
@@ -462,20 +542,27 @@ describe("property: every proposed outfit satisfies the filters and the rules", 
       const result = generateOutfits({ garments, rules, filters }, 3, random);
       if (!result.ok) continue;
 
-      const minWarmth = weatherConstraints(filters.weather).minWarmth;
+      const { minWarmth, outerwear: outerwearRange } = weatherConstraints(filters.weather);
       const excludedGarments = new Set(rules.garmentExclusions.map(({ garmentIds: [a, b] }) => pairKey(a, b)));
       const excludedColors = new Set(rules.colorExclusions.map(({ colors: [a, b] }) => pairKey(a, b)));
 
       expect(new Set(result.outfits.map(outfitKey)).size).toBe(result.outfits.length);
       for (const outfit of result.outfits) {
-        const pieces = [outfit.top, outfit.bottom, outfit.shoes];
+        const pieces = [outfit.top, outfit.bottom, outfit.shoes, ...(outfit.outerwear ? [outfit.outerwear] : [])];
         for (const piece of pieces) {
           expect(piece.seasons.length === 0 || piece.seasons.includes(filters.season)).toBe(true);
           if (filters.occasionId) expect(piece.occasionIds).toContain(filters.occasionId);
           expect(piece.warmth).toBeGreaterThanOrEqual(minWarmth[piece.category] ?? 1);
         }
         if (filters.weather?.rain) expect(outfit.shoes.rainOk).toBe(true);
-        for (const [a, b] of [[outfit.top, outfit.bottom], [outfit.top, outfit.shoes], [outfit.bottom, outfit.shoes]] as const) {
+        if (outfit.outerwear) {
+          expect(outerwearRange).not.toBeNull();
+          expect(outfit.outerwear.warmth).toBeGreaterThanOrEqual(outerwearRange!.minWarmth);
+          expect(outfit.outerwear.warmth).toBeLessThanOrEqual(outerwearRange!.maxWarmth);
+          if (filters.weather?.rain) expect(outfit.outerwear.rainOk).toBe(true);
+        }
+        const pairs = pieces.flatMap((a, i) => pieces.slice(i + 1).map((b) => [a, b] as const));
+        for (const [a, b] of pairs) {
           expect(excludedGarments.has(pairKey(a.id, b.id))).toBe(false);
           for (const ca of a.colors) for (const cb of b.colors) expect(excludedColors.has(pairKey(ca, cb))).toBe(false);
         }

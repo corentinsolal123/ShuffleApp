@@ -1,18 +1,20 @@
 import type { ColorKey } from "@/lib/palette";
 
-export const CATEGORIES = ["top", "bottom", "shoes"] as const;
+export const CATEGORIES = ["top", "bottom", "shoes", "outerwear"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   top: "Haut",
   bottom: "Bas",
   shoes: "Chaussures",
+  outerwear: "Manteau",
 };
 
 export const CATEGORY_PLURAL_LABELS: Record<Category, string> = {
   top: "Hauts",
   bottom: "Bas",
   shoes: "Chaussures",
+  outerwear: "Manteaux",
 };
 
 export const SEASONS = ["spring", "summer", "autumn", "winter"] as const;

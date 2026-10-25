@@ -116,6 +116,24 @@ describe.skipIf(!localSupabase)("RLS: garments, occasions links & photos", () =>
     expect(error?.code).toBe("23514");
   });
 
+  it("accepts outerwear as a category", async () => {
+    const { data: id, error } = await alice.client.rpc("save_garment", {
+      p_id: null,
+      p_name: "Doudoune",
+      p_category: "outerwear",
+      p_colors: ["navy"],
+      p_seasons: ["winter"],
+      p_warmth: 3,
+      p_rain_ok: true,
+      p_photo_path: alicePhotoPath,
+      p_occasion_ids: [await firstOccasionId(alice)],
+    });
+    expect(error).toBeNull();
+
+    const { data } = await alice.client.from("garments").select("category").eq("id", id!).single();
+    expect(data?.category).toBe("outerwear");
+  });
+
   it("keeps photos private to their owner", async () => {
     const own = await alice.client.storage.from(GARMENT_PHOTOS_BUCKET).createSignedUrl(alicePhotoPath, 60);
     expect(own.error).toBeNull();
