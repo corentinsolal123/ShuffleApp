@@ -24,3 +24,9 @@ export async function getSessionEmail(): Promise<string | null> {
   const email = (await getClaims())?.email;
   return typeof email === "string" ? email : null;
 }
+
+/** Admins manage invitations; the flag lives in app_metadata, which only SQL can set. */
+export async function isAdmin(): Promise<boolean> {
+  const appMetadata = (await getClaims())?.app_metadata as { admin?: unknown } | undefined;
+  return appMetadata?.admin === true;
+}

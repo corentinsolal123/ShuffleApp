@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import type { Database } from "@/lib/db/types";
 import { GARMENT_PHOTOS_BUCKET, photoPath } from "@/lib/garments/photo";
 import type { GarmentInput } from "@/lib/garments/schema";
-import { anonClient, createTestUser, deleteTestUser, localSupabase, type TestUser } from "./helpers";
+import { adminClient, anonClient, createTestUser, deleteTestUser, localSupabase, type TestUser } from "./helpers";
 
 // The server actions run for real against the local Supabase: only the cookie-based
 // client is swapped for the client of the user the test acts as.
@@ -22,9 +22,8 @@ const { deleteGarment, saveGarment } = await import("@/app/(app)/wardrobe/action
 const { createColorExclusion, createGarmentExclusions, deleteColorExclusion } = await import(
   "@/app/(app)/rules/actions"
 );
-const { createOccasion, deleteOccasion, renameOccasion, saveDefaultCity } = await import(
-  "@/app/(app)/settings/actions"
-);
+const { createOccasion, deleteOccasion, inviteEmail, renameOccasion, revokeInvitation, saveDefaultCity } =
+  await import("@/app/(app)/settings/actions");
 
 const PHOTO = new Blob([new Uint8Array([0x52, 0x49, 0x46, 0x46])], { type: "image/webp" });
 
@@ -76,15 +75,18 @@ async function createGarment(user: TestUser, overrides: Partial<GarmentInput> = 
 describe.skipIf(!localSupabase)("Server actions against the local Supabase", () => {
   let alice: TestUser;
   let bob: TestUser;
+  let admin: TestUser;
 
   beforeAll(async () => {
     alice = await createTestUser("alice");
     bob = await createTestUser("bob");
+    admin = await createTestUser("admin", { admin: true });
   });
 
   afterAll(async () => {
     await deleteTestUser(alice);
     await deleteTestUser(bob);
+    await deleteTestUser(admin);
   });
 
   beforeEach(() => {
@@ -243,6 +245,41 @@ describe.skipIf(!localSupabase)("Server actions against the local Supabase", () 
 
       actAs(bob);
       expect(await deleteOccasion(everyday, null)).toEqual({ ok: false, error: "Cette occasion n'existe plus." });
+    });
+  });
+
+  describe("invitations", () => {
+    it("lets only the admin invite, normalising the address", async () => {
+      const email = `Ami-${crypto.randomUUID()}@Exemple.fr`;
+
+      actAs(alice);
+      expect(await inviteEmail(email)).toEqual({ ok: false, error: "Réservé à l'administrateur." });
+
+      actAs(admin);
+      expect(await inviteEmail(`  ${email} `)).toEqual({ ok: true });
+      expect(await inviteEmail(email)).toEqual({ ok: false, error: "Cette adresse est déjà invitée." });
+      expect(await inviteEmail("pas-une-adresse")).toEqual({ ok: false, error: "Adresse email invalide." });
+
+      const { data } = await admin.client.from("invitations").select("email").eq("email", email.toLowerCase());
+      expect(data).toEqual([{ email: email.toLowerCase() }]);
+    });
+
+    it("cancels pending invitations only", async () => {
+      const pending = `pending-${crypto.randomUUID()}@exemple.fr`;
+      const accepted = `accepted-${crypto.randomUUID()}@exemple.fr`;
+      actAs(admin);
+      await inviteEmail(pending);
+      await inviteEmail(accepted);
+      await adminClient().from("invitations").update({ accepted_at: new Date().toISOString() }).eq("email", accepted);
+
+      actAs(bob);
+      expect(await revokeInvitation(pending)).toEqual({ ok: false, error: "Réservé à l'administrateur." });
+
+      actAs(admin);
+      expect(await revokeInvitation(accepted)).toEqual({ ok: false, error: "Invitation introuvable." });
+      expect(await revokeInvitation(pending)).toEqual({ ok: true });
+      const { data } = await admin.client.from("invitations").select("email").in("email", [pending, accepted]);
+      expect(data).toEqual([{ email: accepted }]);
     });
   });
 });

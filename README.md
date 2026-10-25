@@ -6,12 +6,12 @@ PWA mobile-first pour gérer sa garde-robe et générer, chaque matin, des idée
 
 ## Fonctionnalités
 
-- **Connexion** par email + code à 6 chiffres (pas de lien magique : sur iOS il ouvrirait Safari, hors de la PWA installée).
+- **Connexion** par email + code à 6 chiffres (pas de lien magique : sur iOS il ouvrirait Safari, hors de la PWA installée). **Inscription sur invitation** : seules les adresses invitées peuvent créer un compte.
 - **Garde-robe** : hauts, bas, chaussures. La photo est prise ou choisie dans la galerie, puis compressée sur le téléphone (1000 px, WebP, ou JPEG sur Safari). On renseigne aussi les couleurs, les saisons, les occasions, la chaleur et l'adaptation à la pluie.
 - **Règles de compatibilité** : tout va avec tout par défaut. On ajoute des exclusions « ce vêtement ne va jamais avec celui-là » ou « jamais cette couleur avec celle-là ».
 - **Génération** : 1 à 3 tenues tirées au hasard parmi les combinaisons valides, sans pièce commune quand c'est possible, et relançables une par une. Quand rien n'est possible, l'écran dit quel filtre bloque.
 - **Météo du jour** : ressenti de 8 h à 18 h et pluie, via la position du téléphone ou la ville par défaut. Le détail heure par heure est accessible.
-- **Réglages** : ville par défaut, occasions (ajout, renommage, suppression avec réaffectation), installation de l'app, déconnexion.
+- **Réglages** : ville par défaut, occasions (ajout, renommage, suppression avec réaffectation), invités (admin uniquement), installation de l'app, déconnexion.
 
 Toutes les données sont privées. La RLS est activée sur chaque table et sur le bucket photos, qui est privé et servi par URLs signées. Les photos étant ré-encodées sur le téléphone, leurs métadonnées EXIF (dont la position GPS) ne sont jamais envoyées.
 
@@ -84,11 +84,18 @@ pnpm dev                     # http://localhost:3000
 2. **Créer le schéma** (tables, index, RLS **et** bucket privé `garments`) : c'est le workflow GitHub [Deploy migrations](.github/workflows/migrations.yml) qui applique `supabase/migrations` (voir [Intégration continue](#intégration-continue)). Sur un projet vide, le lancer une fois à la main : *Actions › Deploy migrations › Run workflow*.
 3. **Authentification** (Authentication dans le dashboard) :
    - *Sign In / Providers* : laisser **Email** activé, avec une **longueur d'OTP de 6** (c'est ce que l'écran de connexion attend).
-   - *Emails › **SMTP Settings*** : **obligatoire**. Sans SMTP personnalisé, Supabase n'autorise pas la modification des gabarits et n'envoie qu'un lien, alors que l'app attend un code. Un service gratuit suffit, par exemple [Resend](https://resend.com) : hôte `smtp.resend.com`, port `465`, utilisateur `resend`, mot de passe = la clé API, expéditeur `onboarding@resend.dev`. Sans domaine vérifié, Resend n'envoie qu'à l'adresse de ton compte Resend, ce qui suffit pour un usage perso.
+   - *Emails › **SMTP Settings*** : **obligatoire**. Sans SMTP personnalisé, Supabase n'autorise pas la modification des gabarits et n'envoie qu'un lien, alors que l'app attend un code. Pour envoyer les codes à des invités **sans nom de domaine** : un compte Gmail dédié, avec la validation en deux étapes et un *mot de passe d'application* : hôte `smtp.gmail.com`, port `465`, utilisateur = l'adresse Gmail, mot de passe = le mot de passe d'application (environ 500 emails par jour). Avec un domaine vérifié, [Resend](https://resend.com) convient aussi (`smtp.resend.com`, port `465`, utilisateur `resend`, mot de passe = la clé API). Sans domaine, Resend n'envoie qu'à l'adresse de ton propre compte.
    - *Emails › Templates* : coller [`supabase/templates/otp.html`](supabase/templates/otp.html) dans **Magic link or OTP** (sujet « Votre code de connexion Shuffle ») et [`supabase/templates/confirm-signup.html`](supabase/templates/confirm-signup.html) dans **Confirm signup** (sujet « Bienvenue sur Shuffle : votre code »). Les deux affichent le code via `{{ .Token }}`.
    - *URL Configuration* : **Site URL** = l'URL de production (Vercel).
 4. **Clés** (Project Settings › API Keys) : récupérer l'**URL du projet** et la **Publishable key**.
-5. **Fermer les inscriptions** une fois ton compte créé : *Sign In / Providers* › décocher **Allow new users to sign up**. Sans ça, n'importe qui connaissant l'URL peut créer un compte et stocker des photos sur ton projet. L'app affiche alors « Les inscriptions sont fermées » aux inconnus.
+5. **Inscription sur invitation** :
+   - *Authentication › Sign In / Providers* : laisser **Allow new users to sign up** coché ;
+   - *Authentication › Hooks* › **Before User Created** : type *Postgres*, schéma `public`, fonction `hook_before_user_created`. Seules les adresses de `public.invitations` peuvent alors créer un compte ; les autres voient « Cette adresse n'a pas été invitée ». ⚠️ Activer le hook **après** avoir appliqué la migration `20261028000000_invitations.sql`, sinon toute création de compte échoue ;
+   - se déclarer **admin** (une seule fois, dans le SQL Editor) pour voir la section *Invités* des Réglages :
+     ```sql
+     update auth.users set raw_app_meta_data = raw_app_meta_data || '{"admin": true}' where email = 'toi@exemple.fr';
+     ```
+     Le droit est lu dans le jeton de session : se déconnecter puis se reconnecter pour qu'il s'applique.
 
 Les photos ne demandent aucune configuration supplémentaire : le bucket et ses policies sont dans `supabase/migrations/20261024000000_garments.sql`.
 

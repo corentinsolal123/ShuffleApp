@@ -12,7 +12,7 @@ export type TestUser = {
 
 const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
 
-function adminClient(): SupabaseClient<Database> {
+export function adminClient(): SupabaseClient<Database> {
   if (!localSupabase) throw new Error("Local Supabase is not available");
   return createClient<Database>(localSupabase.url, localSupabase.secretKey, clientOptions);
 }
@@ -22,12 +22,20 @@ export function anonClient(): SupabaseClient<Database> {
   return createClient<Database>(localSupabase.url, localSupabase.publishableKey, clientOptions);
 }
 
-/** Creates a confirmed user through the admin API and returns a client signed in as them. */
-export async function createTestUser(label: string): Promise<TestUser> {
+/**
+ * Creates a confirmed user through the admin API (which the invitation hook does
+ * not filter) and returns a client signed in as them.
+ */
+export async function createTestUser(label: string, { admin = false } = {}): Promise<TestUser> {
   const email = `${label}-${crypto.randomUUID()}@rls.test`;
   const password = crypto.randomUUID();
 
-  const { data, error } = await adminClient().auth.admin.createUser({ email, password, email_confirm: true });
+  const { data, error } = await adminClient().auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    app_metadata: admin ? { admin: true } : {},
+  });
   if (error || !data.user) throw error ?? new Error("User creation failed");
 
   const client = anonClient();

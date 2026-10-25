@@ -44,6 +44,14 @@ describe("LoginForm", () => {
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
   });
 
+  it("explains that the address has not been invited", async () => {
+    server.use(authHandlers.otpNotInvited());
+    await requestCode();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Cette adresse n'a pas été invitée.");
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+  });
+
   it("signs in and goes home when the 6-digit code is valid", async () => {
     server.use(authHandlers.otpSent(), authHandlers.verifySucceeds(EMAIL));
     const user = await requestCode();

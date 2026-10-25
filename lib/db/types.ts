@@ -195,12 +195,37 @@ export type Database = {
         };
         Relationships: [];
       };
+      invitations: {
+        Row: {
+          email: string;
+          invited_by: string | null;
+          created_at: string;
+          accepted_at: string | null;
+        };
+        Insert: {
+          email: string;
+          invited_by?: string | null;
+          created_at?: string;
+          accepted_at?: string | null;
+        };
+        Update: {
+          email?: string;
+          invited_by?: string | null;
+          created_at?: string;
+          accepted_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
       delete_occasion: {
         Args: { p_id: string; p_replacement_id?: string | null };
         Returns: undefined;
+      };
+      is_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
       };
       palette_colors: {
         Args: Record<PropertyKey, never>;

@@ -20,6 +20,15 @@ export const authHandlers = {
       ),
     ),
 
+  // Response of the before-user-created hook for an email that is not invited.
+  otpNotInvited: () =>
+    http.post(`${SUPABASE_URL}/auth/v1/otp`, () =>
+      HttpResponse.json(
+        { code: 403, error_code: "unknown", msg: "This email address has not been invited." },
+        { status: 403 },
+      ),
+    ),
+
   verifySucceeds: (email: string) =>
     http.post(`${SUPABASE_URL}/auth/v1/verify`, () =>
       HttpResponse.json({
