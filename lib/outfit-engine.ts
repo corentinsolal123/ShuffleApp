@@ -57,7 +57,7 @@ export type BlockReason =
 export type EngineNote =
   /** It is hot but light pieces could not form an outfit: other warmth levels were used. */
   | { kind: "light_preference_relaxed" }
-  /** It is cold enough for outerwear, but none fits: outfits come without. */
+  /** The weather calls for outerwear (cold or rain), but none fits: outfits come without. */
   | { kind: "outerwear_skipped"; cause: "missing" | BlockingFilter | "rules" }
   | { kind: "fewer_than_requested"; requested: number; available: number };
 

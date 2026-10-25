@@ -37,7 +37,7 @@ describe("noteMessage", () => {
   });
 
   it.each([
-    ["missing", "Il fait frais, mais votre garde-robe n'a aucune veste ni aucun manteau. Tenues proposées sans manteau."],
+    ["missing", "La météo demande une veste ou un manteau, mais votre garde-robe n'en a aucun. Tenues proposées sans manteau."],
     ["warmth", "Aucun manteau adapté pour 2 °C ressentis. Tenues proposées sans manteau."],
     ["rain", "Aucun manteau imperméable. Tenues proposées sans manteau."],
     ["rules", "Vos règles excluent tous les manteaux adaptés. Tenues proposées sans manteau."],

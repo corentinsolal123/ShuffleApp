@@ -266,7 +266,7 @@ describe("outerwear", () => {
     return analysis.ok ? new Set(analysis.outfits.map((outfit) => outfit.outerwear?.id ?? null)) : null;
   };
 
-  it("adds no outerwear from 17 °C, nor without weather", () => {
+  it("adds no outerwear from 17 °C without rain, nor without weather", () => {
     expect(coatsAt(17)).toEqual(new Set([null]));
     expect(coatsAt(25)).toEqual(new Set([null]));
     expect(allOutfitKeys(input([...core, ...coats], { weather: null }))).toEqual(["t|b|s"]);
@@ -288,6 +288,12 @@ describe("outerwear", () => {
   it("requires rain-proof outerwear when rain is expected", () => {
     const wardrobe = [...core, outerwear("o-dry", { rainOk: false }), outerwear("o-rain", { rainOk: true })];
     expect(coatsAt(12, true, wardrobe)).toEqual(new Set(["o-rain"]));
+  });
+
+  it("adds a light or medium rain-proof outerwear on a mild rainy day", () => {
+    const wardrobe = [...core, ...coats, outerwear("o-dry", { warmth: 1, rainOk: false })];
+    expect(coatsAt(20, true, wardrobe)).toEqual(new Set(["o-light", "o-mid"]));
+    expect(coatsAt(30, true, wardrobe)).toEqual(new Set(["o-light", "o-mid"]));
   });
 
   it("applies the season, occasion and exclusion rules to the outerwear", () => {

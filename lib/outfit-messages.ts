@@ -104,7 +104,7 @@ function outerwearSkippedMessage(
 ): string {
   switch (cause) {
     case "missing":
-      return "Il fait frais, mais votre garde-robe n'a aucune veste ni aucun manteau.";
+      return "La météo demande une veste ou un manteau, mais votre garde-robe n'en a aucun.";
     case "rules":
       return "Vos règles excluent tous les manteaux adaptés.";
     default:

@@ -24,6 +24,8 @@ export type WeatherRuleConfig = {
    * Checked from coldest to mildest; above the mildest threshold, no outerwear.
    */
   outerwear: readonly ({ below: number } & WarmthRange)[];
+  /** Outerwear for a rainy day too mild for the thresholds above. */
+  rainOuterwear: WarmthRange;
 };
 
 /** Inclusive range of acceptable warmth levels. */
@@ -41,13 +43,14 @@ export const DEFAULT_WEATHER_RULES: WeatherRuleConfig = {
     { below: 10, minWarmth: 2, maxWarmth: 3 },
     { below: 17, minWarmth: 1, maxWarmth: 2 },
   ],
+  rainOuterwear: { minWarmth: 1, maxWarmth: 2 },
 };
 
 export type WeatherConstraints = {
   minWarmth: Partial<Record<Category, Warmth>>;
   preferredWarmth: Partial<Record<Category, Warmth>>;
   rainProof: readonly Category[];
-  /** Outerwear to add to the outfit, or null when it is not cold enough (or no weather). */
+  /** Outerwear to add to the outfit, or null when it is neither cold nor rainy (or no weather). */
   outerwear: WarmthRange | null;
 };
 
@@ -63,7 +66,7 @@ export function weatherConstraints(
   const coldest = <T extends { below: number }>(thresholds: readonly T[]) =>
     [...thresholds].sort((a, b) => a.below - b.below).find((rule) => weather.feelsLike < rule.below);
   const cold = coldest(rules.cold);
-  const outerwear = coldest(rules.outerwear);
+  const outerwear = coldest(rules.outerwear) ?? (weather.rain ? rules.rainOuterwear : undefined);
   const hot = weather.feelsLike > rules.hot.above;
 
   return {
