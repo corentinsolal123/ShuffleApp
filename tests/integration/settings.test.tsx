@@ -2,9 +2,17 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createOccasion, deleteOccasion, renameOccasion, saveDefaultCity } from "@/app/(app)/settings/actions";
+import {
+  createOccasion,
+  deleteOccasion,
+  inviteEmail,
+  renameOccasion,
+  revokeInvitation,
+  saveDefaultCity,
+} from "@/app/(app)/settings/actions";
 import { CitySetting } from "@/components/settings/city-setting";
 import { InstallHint } from "@/components/settings/install-hint";
+import { InvitationsManager } from "@/components/settings/invitations-manager";
 import { OccasionsManager } from "@/components/settings/occasions-manager";
 import type { OccasionWithUsage } from "@/lib/occasions/model";
 import { server } from "@/tests/msw/server";
@@ -14,6 +22,8 @@ vi.mock("@/app/(app)/settings/actions", () => ({
   createOccasion: vi.fn(),
   renameOccasion: vi.fn(),
   deleteOccasion: vi.fn(),
+  inviteEmail: vi.fn(),
+  revokeInvitation: vi.fn(),
 }));
 
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
@@ -23,6 +33,8 @@ afterEach(() => {
   vi.mocked(createOccasion).mockReset();
   vi.mocked(renameOccasion).mockReset();
   vi.mocked(deleteOccasion).mockReset();
+  vi.mocked(inviteEmail).mockReset();
+  vi.mocked(revokeInvitation).mockReset();
 });
 
 describe("CitySetting", () => {
@@ -204,5 +216,54 @@ describe("InstallHint", () => {
 
     expect(screen.getByText("Installer l'application")).toBeInTheDocument();
     expect(screen.getByText("Sur l'écran d'accueil")).toBeInTheDocument();
+  });
+});
+
+describe("InvitationsManager", () => {
+  const invitations = [
+    { email: "ami@exemple.fr", createdAt: "2026-10-20T10:00:00Z", acceptedAt: null },
+    { email: "soeur@exemple.fr", createdAt: "2026-10-18T10:00:00Z", acceptedAt: "2026-10-19T08:00:00Z" },
+  ];
+
+  it("shows who is still pending and who has signed up", () => {
+    render(<InvitationsManager invitations={invitations} />);
+
+    const [pending, accepted] = screen.getAllByRole("listitem");
+    expect(pending).toHaveTextContent("En attente · invité le 20 oct.");
+    expect(accepted).toHaveTextContent("Inscrit le 19 oct.");
+    expect(within(accepted!).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("invites an address and clears the field", async () => {
+    vi.mocked(inviteEmail).mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    render(<InvitationsManager invitations={[]} />);
+
+    await user.type(screen.getByLabelText("Adresse à inviter"), "nouveau@exemple.fr");
+    await user.click(screen.getByRole("button", { name: "Inviter" }));
+
+    expect(inviteEmail).toHaveBeenCalledWith("nouveau@exemple.fr");
+    await waitFor(() => expect(screen.getByLabelText("Adresse à inviter")).toHaveValue(""));
+  });
+
+  it("shows the error returned by the server", async () => {
+    vi.mocked(inviteEmail).mockResolvedValue({ ok: false, error: "Cette adresse est déjà invitée." });
+    const user = userEvent.setup();
+    render(<InvitationsManager invitations={[]} />);
+
+    await user.type(screen.getByLabelText("Adresse à inviter"), "ami@exemple.fr");
+    await user.click(screen.getByRole("button", { name: "Inviter" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Cette adresse est déjà invitée.");
+  });
+
+  it("cancels a pending invitation", async () => {
+    vi.mocked(revokeInvitation).mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    render(<InvitationsManager invitations={invitations} />);
+
+    await user.click(screen.getByRole("button", { name: "Annuler l'invitation de ami@exemple.fr" }));
+
+    expect(revokeInvitation).toHaveBeenCalledWith("ami@exemple.fr");
   });
 });

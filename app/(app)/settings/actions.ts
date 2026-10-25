@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireUserId } from "@/lib/auth/session";
+import { isAdmin, requireUserId } from "@/lib/auth/session";
+import { invitationEmailSchema } from "@/lib/invitations/model";
 import { OCCASION_NAME_MAX_LENGTH } from "@/lib/occasions/model";
 import { createClient } from "@/lib/supabase/server";
 
@@ -116,5 +117,43 @@ export async function deleteOccasion(id: string, replacementId: string | null): 
   }
 
   revalidateEverything();
+  return { ok: true };
+}
+
+const ADMIN_ONLY = "Réservé à l'administrateur.";
+
+/** Lets `email` create an account. RLS also restricts invitations to admins. */
+export async function inviteEmail(email: string): Promise<SettingsActionResult> {
+  await requireUserId();
+  if (!(await isAdmin())) return { ok: false, error: ADMIN_ONLY };
+  const parsed = invitationEmailSchema.safeParse(email);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? GENERIC_ERROR };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("invitations").insert({ email: parsed.data });
+  if (error) return { ok: false, error: error.code === "23505" ? "Cette adresse est déjà invitée." : GENERIC_ERROR };
+
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+/** Withdraws a pending invitation; an account already created is kept. */
+export async function revokeInvitation(email: string): Promise<SettingsActionResult> {
+  await requireUserId();
+  if (!(await isAdmin())) return { ok: false, error: ADMIN_ONLY };
+  const parsed = invitationEmailSchema.safeParse(email);
+  if (!parsed.success) return { ok: false, error: "Invitation introuvable." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invitations")
+    .delete()
+    .eq("email", parsed.data)
+    .is("accepted_at", null)
+    .select("email");
+  if (error) return { ok: false, error: "Suppression impossible. Réessayez." };
+  if (data.length === 0) return { ok: false, error: "Invitation introuvable." };
+
+  revalidatePath("/settings");
   return { ok: true };
 }

@@ -4,15 +4,23 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { CitySetting } from "@/components/settings/city-setting";
 import { InstallHint } from "@/components/settings/install-hint";
+import { InvitationsManager } from "@/components/settings/invitations-manager";
 import { OccasionsManager } from "@/components/settings/occasions-manager";
-import { getSessionEmail } from "@/lib/auth/session";
+import { getSessionEmail, isAdmin } from "@/lib/auth/session";
+import { listInvitations } from "@/lib/invitations/queries";
 import { listOccasionsWithUsage } from "@/lib/occasions/queries";
 import { getProfile } from "@/lib/profile/queries";
 
 export const metadata: Metadata = { title: "Réglages" };
 
 export default async function SettingsPage() {
-  const [profile, occasions, email] = await Promise.all([getProfile(), listOccasionsWithUsage(), getSessionEmail()]);
+  const [profile, occasions, email, admin] = await Promise.all([
+    getProfile(),
+    listOccasionsWithUsage(),
+    getSessionEmail(),
+    isAdmin(),
+  ]);
+  const invitations = admin ? await listInvitations() : null;
 
   return (
     <>
@@ -25,6 +33,12 @@ export default async function SettingsPage() {
         <SettingsSection title="Occasions">
           <OccasionsManager occasions={occasions} />
         </SettingsSection>
+
+        {invitations && (
+          <SettingsSection title="Invités">
+            <InvitationsManager invitations={invitations} />
+          </SettingsSection>
+        )}
 
         <InstallHint />
 
