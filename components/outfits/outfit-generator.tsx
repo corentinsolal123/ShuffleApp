@@ -148,7 +148,7 @@ export function OutfitGenerator({
           <div className="flex flex-col gap-4">
             {result.notes.map((note) => (
               <p key={note.kind} className="text-sm text-muted-foreground">
-                {noteMessage(note)}
+                {noteMessage(note, messageContext())}
               </p>
             ))}
             <ol

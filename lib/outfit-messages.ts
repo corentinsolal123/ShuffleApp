@@ -5,24 +5,29 @@ const NONE: Record<Category, string> = {
   top: "Aucun haut",
   bottom: "Aucun bas",
   shoes: "Aucune chaussure",
+  outerwear: "Aucun manteau",
 };
 
 const WARM_ENOUGH: Record<Category, string> = {
   top: "assez chaud",
   bottom: "assez chaud",
   shoes: "assez chaude",
+  // Outerwear can be too warm as well as too light.
+  outerwear: "adapté",
 };
 
 const RAIN_PROOF: Record<Category, string> = {
   top: "adapté à la pluie",
   bottom: "adapté à la pluie",
   shoes: "adaptée à la pluie",
+  outerwear: "imperméable",
 };
 
 const ADD_ONE: Record<Category, string> = {
   top: "un haut",
   bottom: "un bas",
   shoes: "une paire de chaussures",
+  outerwear: "une veste ou un manteau",
 };
 
 const FOR_SEASON: Record<Season, string> = {
@@ -80,13 +85,29 @@ function filterMessage(category: Category, filter: BlockingFilter, context: Mess
   }
 }
 
-export function noteMessage(note: EngineNote): string {
+export function noteMessage(note: EngineNote, context: MessageContext): string {
   switch (note.kind) {
     case "light_preference_relaxed":
       return "Il fait chaud, mais pas assez de pièces légères compatibles : d'autres ont été incluses.";
+    case "outerwear_skipped":
+      return `${outerwearSkippedMessage(note.cause, context)} Tenues proposées sans manteau.`;
     case "fewer_than_requested":
       return note.available === 1
         ? "Une seule tenue possible avec ces filtres."
         : `Seulement ${note.available} tenues possibles avec ces filtres.`;
+  }
+}
+
+function outerwearSkippedMessage(
+  cause: Extract<EngineNote, { kind: "outerwear_skipped" }>["cause"],
+  context: MessageContext,
+): string {
+  switch (cause) {
+    case "missing":
+      return "Il fait frais, mais votre garde-robe n'a aucune veste ni aucun manteau.";
+    case "rules":
+      return "Vos règles excluent tous les manteaux adaptés.";
+    default:
+      return filterMessage("outerwear", cause, context);
   }
 }

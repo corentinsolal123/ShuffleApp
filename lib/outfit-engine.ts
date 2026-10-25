@@ -1,9 +1,10 @@
 /**
  * Outfit engine: pure functions, no I/O. Given a wardrobe, exclusion rules and
- * the day's filters, it lists every valid (top, bottom, shoes) combination and
- * draws distinct outfits at random, or explains what blocks.
+ * the day's filters, it lists every valid (top, bottom, shoes) combination,
+ * adds an outerwear piece when the weather calls for one, and draws distinct
+ * outfits at random, or explains what blocks.
  */
-import { CATEGORIES, type Category, type Garment, type Season } from "@/lib/garments/model";
+import type { Category, Garment, Season } from "@/lib/garments/model";
 import { pairKey, type ColorExclusion, type GarmentExclusion } from "@/lib/rules/model";
 import {
   DEFAULT_WEATHER_RULES,
@@ -19,7 +20,11 @@ export const MAX_OUTFITS = 3;
 /** Returns a float in [0, 1), like Math.random. Injected so draws are reproducible in tests. */
 export type Random = () => number;
 
-export type Outfit<G extends Garment = Garment> = { top: G; bottom: G; shoes: G };
+/** Every outfit needs one piece of each of these; outerwear only comes with the weather. */
+const CORE_CATEGORIES = ["top", "bottom", "shoes"] as const;
+type CoreCategory = (typeof CORE_CATEGORIES)[number];
+
+export type Outfit<G extends Garment = Garment> = { top: G; bottom: G; shoes: G; outerwear?: G };
 
 export type OutfitFilters = {
   season: Season;
@@ -52,6 +57,8 @@ export type BlockReason =
 export type EngineNote =
   /** It is hot but light pieces could not form an outfit: other warmth levels were used. */
   | { kind: "light_preference_relaxed" }
+  /** It is cold enough for outerwear, but none fits: outfits come without. */
+  | { kind: "outerwear_skipped"; cause: "missing" | BlockingFilter | "rules" }
   | { kind: "fewer_than_requested"; requested: number; available: number };
 
 export type GenerateResult<G extends Garment = Garment> =
@@ -66,7 +73,7 @@ export type Analysis<G extends Garment = Garment> =
   | { ok: true; outfits: Outfit<G>[]; notes: EngineNote[] }
   | { ok: false; reason: BlockReason };
 
-type Candidates<G> = Record<Category, G[]>;
+type Candidates<G> = Record<CoreCategory, G[]>;
 
 type Exclusions = { garmentPairs: ReadonlySet<string>; colorPairs: ReadonlySet<string> };
 
@@ -83,9 +90,20 @@ export function analyzeOutfits<G extends Garment>(input: EngineInput<G>): Analys
   if (!filtered.ok) return filtered;
 
   const exclusions = toExclusions(input.rules);
+  const core = coreOutfits(filtered.candidates, constraints, exclusions);
+  if (!core.ok || !constraints.outerwear) return core;
+  return addOuterwear(core, input.garments, input.filters, constraints, exclusions);
+}
+
+/** Top, bottom and shoes combinations, honouring the hot-day preference when possible. */
+function coreOutfits<G extends Garment>(
+  candidates: Candidates<G>,
+  constraints: WeatherConstraints,
+  exclusions: Exclusions,
+): Analysis<G> {
   const notes: EngineNote[] = [];
 
-  const preferred = applyPreferences(filtered.candidates, constraints);
+  const preferred = applyPreferences(candidates, constraints);
   if (preferred) {
     const outfits = validOutfits(preferred.candidates, exclusions);
     if (outfits.length > 0 && !preferred.relaxed) {
@@ -97,11 +115,43 @@ export function analyzeOutfits<G extends Garment>(input: EngineInput<G>): Analys
     }
   }
 
-  const outfits = validOutfits(filtered.candidates, exclusions);
+  const outfits = validOutfits(candidates, exclusions);
   if (outfits.length === 0) {
-    return { ok: false, reason: { kind: "rules", blockedBy: blockingRules(filtered.candidates, exclusions) } };
+    return { ok: false, reason: { kind: "rules", blockedBy: blockingRules(candidates, exclusions) } };
   }
   return { ok: true, outfits, notes };
+}
+
+/**
+ * Adds a suitable outerwear piece to each outfit. When none fits, the outfits
+ * are kept without one and a note says why.
+ */
+function addOuterwear<G extends Garment>(
+  core: { outfits: Outfit<G>[]; notes: EngineNote[] },
+  garments: readonly G[],
+  filters: OutfitFilters,
+  constraints: WeatherConstraints,
+  exclusions: Exclusions,
+): Analysis<G> {
+  const skipped = (cause: Extract<EngineNote, { kind: "outerwear_skipped" }>["cause"]): Analysis<G> => ({
+    ok: true,
+    outfits: core.outfits,
+    notes: [...core.notes, { kind: "outerwear_skipped", cause }],
+  });
+
+  const pool = garments.filter((garment) => garment.category === "outerwear");
+  if (pool.length === 0) return skipped("missing");
+
+  const filtered = applyFilters(pool, filterSteps("outerwear", filters, constraints));
+  if (!filtered.ok) return skipped(filtered.filter);
+
+  const outfits = core.outfits.flatMap((outfit) =>
+    filtered.pool
+      .filter((outerwear) => [outfit.top, outfit.bottom, outfit.shoes].every((piece) => compatible(piece, outerwear, exclusions)))
+      .map((outerwear) => ({ ...outfit, outerwear })),
+  );
+  if (outfits.length === 0) return skipped("rules");
+  return { ok: true, outfits, notes: core.notes };
 }
 
 /**
@@ -156,7 +206,7 @@ export function rerollOutfit<G extends Garment>(
 }
 
 export function outfitKey(outfit: Outfit): string {
-  return `${outfit.top.id}|${outfit.bottom.id}|${outfit.shoes.id}`;
+  return pieces(outfit).join("|");
 }
 
 // ---------------------------------------------------------------------------
@@ -170,31 +220,50 @@ function filterCandidates<G extends Garment>(
 ): { ok: true; candidates: Candidates<G> } | { ok: false; reason: BlockReason } {
   const candidates = {} as Candidates<G>;
 
-  for (const category of CATEGORIES) {
-    let pool = garments.filter((garment) => garment.category === category);
+  for (const category of CORE_CATEGORIES) {
+    const pool = garments.filter((garment) => garment.category === category);
     if (pool.length === 0) {
       return { ok: false, reason: { kind: "missing_category", category } };
     }
 
-    const minWarmth = constraints.minWarmth[category] ?? 1;
-    const mustBeRainProof = constraints.rainProof.includes(category);
-    const steps: [BlockingFilter, (garment: G) => boolean][] = [
-      ["season", (g) => g.seasons.length === 0 || g.seasons.includes(filters.season)],
-      ["occasion", (g) => !filters.occasionId || g.occasionIds.includes(filters.occasionId)],
-      ["warmth", (g) => g.warmth >= minWarmth],
-      ["rain", (g) => !mustBeRainProof || g.rainOk],
-    ];
-
-    for (const [filter, keep] of steps) {
-      pool = pool.filter(keep);
-      if (pool.length === 0) {
-        return { ok: false, reason: { kind: "filter", category, filter } };
-      }
+    const filtered = applyFilters(pool, filterSteps(category, filters, constraints));
+    if (!filtered.ok) {
+      return { ok: false, reason: { kind: "filter", category, filter: filtered.filter } };
     }
-    candidates[category] = pool;
+    candidates[category] = filtered.pool;
   }
 
   return { ok: true, candidates };
+}
+
+type FilterStep = [BlockingFilter, (garment: Garment) => boolean];
+
+/** The filters for one category, in the order season → occasion → warmth → rain. */
+function filterSteps(category: Category, filters: OutfitFilters, constraints: WeatherConstraints): FilterStep[] {
+  const { minWarmth, maxWarmth } =
+    category === "outerwear" && constraints.outerwear
+      ? constraints.outerwear
+      : { minWarmth: constraints.minWarmth[category] ?? 1, maxWarmth: 3 };
+  const mustBeRainProof = constraints.rainProof.includes(category);
+  return [
+    ["season", (g) => g.seasons.length === 0 || g.seasons.includes(filters.season)],
+    ["occasion", (g) => !filters.occasionId || g.occasionIds.includes(filters.occasionId)],
+    ["warmth", (g) => g.warmth >= minWarmth && g.warmth <= maxWarmth],
+    ["rain", (g) => !mustBeRainProof || g.rainOk],
+  ];
+}
+
+/** Applies the steps in turn; names the first one that leaves nothing. */
+function applyFilters<G extends Garment>(
+  pool: readonly G[],
+  steps: readonly FilterStep[],
+): { ok: true; pool: G[] } | { ok: false; filter: BlockingFilter } {
+  let remaining = [...pool];
+  for (const [filter, keep] of steps) {
+    remaining = remaining.filter(keep);
+    if (remaining.length === 0) return { ok: false, filter };
+  }
+  return { ok: true, pool: remaining };
 }
 
 /**
@@ -205,7 +274,9 @@ function applyPreferences<G extends Garment>(
   candidates: Candidates<G>,
   constraints: WeatherConstraints,
 ): { candidates: Candidates<G>; relaxed: boolean } | null {
-  const preferences = Object.entries(constraints.preferredWarmth) as [Category, number][];
+  const preferences = (Object.entries(constraints.preferredWarmth) as [Category, number][]).filter(
+    (entry): entry is [CoreCategory, number] => (CORE_CATEGORIES as readonly Category[]).includes(entry[0]),
+  );
   if (preferences.length === 0) return null;
 
   let relaxed = false;
@@ -284,7 +355,8 @@ function clampCount(count: number): number {
 }
 
 function pieces(outfit: Outfit): string[] {
-  return [outfit.top.id, outfit.bottom.id, outfit.shoes.id];
+  const ids = [outfit.top.id, outfit.bottom.id, outfit.shoes.id];
+  return outfit.outerwear ? [...ids, outfit.outerwear.id] : ids;
 }
 
 function addPieces(weights: Map<string, number>, outfits: readonly Outfit[], weight: number) {

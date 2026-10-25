@@ -235,7 +235,7 @@ export function GarmentForm({
       <Field className="flex-row items-center justify-between gap-4 border-y py-4">
         <div className="flex flex-col gap-1">
           <FieldLabel>Adapté à la pluie</FieldLabel>
-          <p className="text-sm text-muted-foreground">Surtout pour les chaussures.</p>
+          <p className="text-sm text-muted-foreground">Surtout pour les chaussures et les manteaux.</p>
         </div>
         <Switch checked={rainOk} onCheckedChange={setRainOk} disabled={busy} />
       </Field>

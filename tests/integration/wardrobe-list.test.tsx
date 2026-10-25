@@ -20,7 +20,7 @@ const garment = (patch: Partial<GarmentWithPhoto>): GarmentWithPhoto => ({
 
 describe("CategoryTabs", () => {
   it("marks the active category and shows the counts", () => {
-    render(<CategoryTabs active="shoes" counts={{ top: 4, bottom: 2, shoes: 1 }} />);
+    render(<CategoryTabs active="shoes" counts={{ top: 4, bottom: 2, shoes: 1, outerwear: 3 }} />);
 
     const current = screen.getByRole("link", { current: "page" });
     expect(current).toHaveTextContent("Chaussures1");

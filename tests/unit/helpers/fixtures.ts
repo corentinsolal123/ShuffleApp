@@ -34,5 +34,6 @@ function garment(id: string, category: Garment["category"], patch: Partial<Garme
 export const top = (id: string, patch?: Partial<Garment>) => garment(id, "top", patch);
 export const bottom = (id: string, patch?: Partial<Garment>) => garment(id, "bottom", patch);
 export const shoes = (id: string, patch?: Partial<Garment>) => garment(id, "shoes", patch);
+export const outerwear = (id: string, patch?: Partial<Garment>) => garment(id, "outerwear", patch);
 
 export const NO_RULES = { garmentExclusions: [], colorExclusions: [] } as const;
