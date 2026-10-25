@@ -47,7 +47,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Applies every migration to a fresh database: a broken migration fails here.
       - name: Start local Supabase
-        run: pnpm supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,supavisor,mailpit
+        # Mailpit stays: sign-up tests send codes by email.
+        run: pnpm supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,supavisor
       - name: RLS and server action tests
         run: pnpm test:rls
       - name: Stop local Supabase
